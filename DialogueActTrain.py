@@ -127,11 +127,11 @@ class DialogueActTrain:
                               )
         """
 
-
-d = DialogueActTrain([Oasis(oasis_folder="Oasis/corpus"),
-                      AMI(ami_folder="AMI/corpus"),
-                      VerbMobil(verbmobil_folder="VerbMobil/VM2", en_files="VerbMobil/files.txt"),
-                      Switchboard(switchboard_folder="Switchboard/SWDA", estimator=DAMSL),
-                      Maptask(maptask_folder="Maptask/maptaskv2-1")
-                      ])
-d.train_all("models")
+if __name__=="__main__":
+    d = DialogueActTrain([Oasis(oasis_folder="Oasis/corpus"),
+                          AMI(ami_folder="AMI/corpus"),
+                          VerbMobil(verbmobil_folder="VerbMobil/VM2", en_files="VerbMobil/files.txt"),
+                          Switchboard(switchboard_folder="Switchboard/SWDA", estimator=DAMSL),
+                          Maptask(maptask_folder="Maptask/maptaskv2-1")
+                          ])
+    d.train_all("models")
