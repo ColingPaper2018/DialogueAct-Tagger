@@ -4,7 +4,8 @@
 
 pip install nltk
 pip install scikit-learn
-
+pip install spacy
+python -m spacy download en
 
 #2) Download publicly available corpora
 if [ ! -d "Maptask/maptaskv2-1" ] ; then

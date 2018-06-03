@@ -14,6 +14,8 @@ from Switchboard.Switchboard import Switchboard
 from Switchboard.DAMSL import DAMSL
 from Maptask.Maptask import Maptask
 from Oasis.Oasis import Oasis
+
+import spacy
 import argparse
 
 
@@ -35,15 +37,25 @@ class DialogueActTrain:
             exit(1)
 
     @staticmethod
-    def build_features(tagged_utterances, indexed_pos=True, ngrams=True, dep=True, prev=True):
+    def build_features(tagged_utterances, indexed_pos=True, indexed_dep=False,
+                       ngrams=True, dep=True, prev=True, nlp_inst=None):
+        if nlp_inst is None:
+            nlp_inst = spacy.load("en")
         dimension_features = []
         for utt in tagged_utterances:
             features = {}
             features["word_count"] = utt[0].lower()
             features["labels"] = {}
-            for i, pos in enumerate(nltk.pos_tag(nltk.word_tokenize(utt[0]))):
-                features["labels"]["pos_" + str(i) + pos[1]] = True
-            features["prev_" + utt[1]] = True
+            doc = nlp_inst(utt[0])
+            for i, tok in enumerate(doc):
+                if indexed_pos:
+                    features["labels"]["pos_" + tok.tag_] = True
+                if dep:
+                    features["labels"][tok.dep_] = True
+                if indexed_dep:
+                    features["labels"]["pos_" + tok.dep_] = True
+            if prev:
+                features["prev_" + utt[1]] = True
             dimension_features.append(features)
         wordcount_pipeline = Pipeline([
             ('selector', ItemSelector(key='word_count')),
