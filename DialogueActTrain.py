@@ -29,6 +29,10 @@ class DialogueActTrain:
                 exit(1)
             if corpus.csv_corpus is not None:  # corpus loaded successfully
                 self.corpora.append(corpus)
+        if len(self.corpora) == 0:
+            print("There are no corpora loaded, and the classifier won't train. Please check README.md for information"
+                  "on how to obtain more data")
+            exit(1)
 
     @staticmethod
     def build_features(tagged_utterances, indexed_pos=True, ngrams=True, dep=True, prev=True):
@@ -49,19 +53,24 @@ class DialogueActTrain:
             ('selector', ItemSelector(key='labels')),
             ('vectorizer', DictVectorizer())
         ])
-        return (dimension_features, [wordcount_pipeline, label_pipeline])
+        return dimension_features, [wordcount_pipeline, label_pipeline]
 
-    def train_classifier(self, dataset, featureset, out_file, classifier):
-        train_pipeline = Pipeline([
-            # Use FeatureUnion to combine the features from wordcount and labels
-            ('union', FeatureUnion(
-                transformer_list=[('feature_' + str(i), pipeline) for i, pipeline in enumerate(featureset[1])]
-            )),
-            # Use a SVC classifier on the combined features
-            ('classifier', classifier)
-        ])
-        train_pipeline.fit(featureset[0], [utt[1] for utt in dataset])
-        pickle.dump(train_pipeline, open(out_file, 'wb'))
+    @staticmethod
+    def train_classifier(dataset, featureset, out_file, classifier):
+        try:
+            train_pipeline = Pipeline([
+                # Use FeatureUnion to combine the features from wordcount and labels
+                ('union', FeatureUnion(
+                    transformer_list=[('feature_' + str(i), pipeline) for i, pipeline in enumerate(featureset[1])]
+                )),
+                # Use a SVC classifier on the combined features
+                ('classifier', classifier)
+            ])
+            train_pipeline.fit(featureset[0], [utt[1] for utt in dataset])
+            pickle.dump(train_pipeline, open(out_file, 'wb'))
+        except ValueError:
+            print(f"Not enough data to train the {out_file} classifier! Please check README.md for more information on"
+                  f"how to obtain more data")
 
     def train_all(self, output_folder):
         try:
