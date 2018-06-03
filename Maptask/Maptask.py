@@ -10,21 +10,24 @@ to dump the corpus in CSV format with original annotation and with ISO annotatio
 
 class Maptask(Corpus):
     def __init__(self, maptask_folder):
-        # check whether the ami_folder contains a valid AMI installation
-        try:
-            assert os.path.exists(maptask_folder)  # folder exists
-            assert os.path.exists(maptask_folder + "/Data")  # Data folder exist
-            assert os.path.exists(maptask_folder + "/Data/timed-units/")  # timed-units folder exists
-            assert os.path.exists(maptask_folder + "/Data/timed-units/q1ec1.f.timed-units.xml")  # DA files exist
-        except AssertionError:
-            print("The folder " + maptask_folder + " does not contain some important files from the corpus.")
-            print(
-                "You can download a complete version of the corpus at http://groups.inf.ed.ac.uk/maptask/maptasknxt.html")
-            exit(1)
+        Corpus.__init__(self, maptask_folder)
         self.maptask_folder = maptask_folder
-        self.csv_corpus = []
+        self.load_csv()
 
     def load_csv(self):
+        # check whether the ami_folder contains a valid AMI installation
+        try:
+            assert os.path.exists(self.maptask_folder)  # folder exists
+            assert os.path.exists(self.maptask_folder + "/Data")  # Data folder exist
+            assert os.path.exists(self.maptask_folder + "/Data/timed-units/")  # timed-units folder exists
+            assert os.path.exists(self.maptask_folder + "/Data/timed-units/q1ec1.f.timed-units.xml")  # DA files exist
+        except AssertionError:
+            print("[WARNING] The folder " + self.maptask_folder + " does not contain some files from the corpus.")
+            print("You can download a complete version at http://groups.inf.ed.ac.uk/maptask/maptasknxt.html")
+            print("")
+            self.csv_corpus = None
+            return
+
         dialogs = self.load_dialogs()
         dialogs = self.update_dialogs_with_DAs(dialogs)
         dialogs = self.fix_moves(dialogs)

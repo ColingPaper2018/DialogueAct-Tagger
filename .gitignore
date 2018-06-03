@@ -1,1 +1,6 @@
 .idea/
+models
+AMI/corpus
+maptaskv2-1
+__pycache*
+

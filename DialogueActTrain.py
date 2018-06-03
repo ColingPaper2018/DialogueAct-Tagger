@@ -1,4 +1,4 @@
-import os
+import os, sys
 import nltk
 import pickle
 from sklearn.pipeline import Pipeline, FeatureUnion
@@ -14,6 +14,7 @@ from Switchboard.Switchboard import Switchboard
 from Switchboard.DAMSL import DAMSL
 from Maptask.Maptask import Maptask
 from Oasis.Oasis import Oasis
+import argparse
 
 
 class DialogueActTrain:
@@ -26,9 +27,8 @@ class DialogueActTrain:
                 print("DialogueActTrain error - The corpora list contains objects which are not corpora")
                 print("Please ensure each of your corpora is a subclass of Corpus")
                 exit(1)
-            self.corpora.append(corpus)
-        for corpus in self.corpora:
-            corpus.load_csv()
+            if corpus.csv_corpus is not None:  # corpus loaded successfully
+                self.corpora.append(corpus)
 
     @staticmethod
     def build_features(tagged_utterances, indexed_pos=True, ngrams=True, dep=True, prev=True):
@@ -49,7 +49,6 @@ class DialogueActTrain:
             ('selector', ItemSelector(key='labels')),
             ('vectorizer', DictVectorizer())
         ])
-        print(dimension_features[:3])
         return (dimension_features, [wordcount_pipeline, label_pipeline])
 
     def train_classifier(self, dataset, featureset, out_file, classifier):
@@ -68,8 +67,8 @@ class DialogueActTrain:
         try:
             assert (os.path.exists(output_folder))
         except AssertionError:
-            print("output_folder should be a valid path. Please enter a valid path to store output models")
-            return
+            print(f"folder {output_folder} does not exist: creating it now")
+            os.mkdir(output_folder)
         # 1 - generate dimension classifier - task
         dimension_dataset = []
         for corpus in self.corpora:
@@ -127,11 +126,20 @@ class DialogueActTrain:
                               )
         """
 
-if __name__=="__main__":
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='DialogueActTrain - Train a DA Tagger using ISO-converted corpora')
+
+    parser.add_argument('-out-folder', dest='out', type=str,
+                        help='where the model files will be stored')
+    args = parser.parse_args()
+    if args.out is None:
+        parser.print_help(sys.stderr)
+        exit(1)
     d = DialogueActTrain([Oasis(oasis_folder="Oasis/corpus"),
                           AMI(ami_folder="AMI/corpus"),
                           VerbMobil(verbmobil_folder="VerbMobil/VM2", en_files="VerbMobil/files.txt"),
                           Switchboard(switchboard_folder="Switchboard/SWDA", estimator=DAMSL),
                           Maptask(maptask_folder="Maptask/maptaskv2-1")
                           ])
-    d.train_all("models")
+    d.train_all(args.out)

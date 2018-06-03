@@ -9,23 +9,28 @@ to dump the corpus in CSV format with original annotation and with ISO annotatio
 
 class VerbMobil(Corpus):
     def __init__(self, verbmobil_folder, en_files="files.txt"):
+        Corpus.__init__(self, verbmobil_folder)
         # load list of english files
         self.en_files = []
         with open(en_files) as f:
             for line in f:
                 self.en_files.append(line.strip())
-        # check whether the verbmobil_folder contains a valid VerbMobil2 installation
-        try:
-            assert os.path.exists(verbmobil_folder)  # folder exists
-            assert os.path.exists(verbmobil_folder + "/e001a")  # dialog folders exist
-            assert os.path.exists(verbmobil_folder + "/e001a/e001ach1_001_SMA.par")  # DA files exist
-        except AssertionError:
-            print("The folder " + verbmobil_folder + " does not contain some important files from the corpus.")
-            exit(1)
         self.verbmobil_folder = verbmobil_folder
-        self.csv_corpus = []
+        self.load_csv()
 
     def load_csv(self):
+        # check whether the verbmobil_folder contains a valid VerbMobil2 installation
+        try:
+            assert os.path.exists(self.verbmobil_folder)  # folder exists
+            assert os.path.exists(self.verbmobil_folder + "/e001a")  # dialog folders exist
+            assert os.path.exists(self.verbmobil_folder + "/e001a/e001ach1_001_SMA.par")  # DA files exist
+        except AssertionError:
+            print("[WARNING] The folder " + self.verbmobil_folder + " does not contain some important files.")
+            print("Look at https://www.phonetik.uni-muenchen.de/Bas/BasVM2eng.html for more information")
+            print("")
+            self.csv_corpus = None
+            return
+
         raw_data = self.load_raw_data()
         self.csv_corpus = self.create_csv(raw_data)
 

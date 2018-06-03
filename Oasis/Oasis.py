@@ -11,20 +11,23 @@ to dump the corpus in CSV format with original annotation and with ISO annotatio
 
 class Oasis(Corpus):
     def __init__(self, oasis_folder):
-        # check whether the oasis_folder contains a valid Oasis installation
-        try:
-            assert os.path.exists(oasis_folder)  # folder exists
-            assert os.path.exists(oasis_folder + "/Data/Lancs_BT150")  # dialogs folders exist
-            assert os.path.exists(oasis_folder + "/Data/Lancs_BT150/075812009.a.lturn.xml")  # DA files exist
-        except AssertionError:
-            print("The folder " + oasis_folder + " does not contain some important files from the corpus.")
-            print("Check http://groups.inf.ed.ac.uk/oasis/ for info on how to obtain the complete SWDA corpus.")
-            exit(1)
+        Corpus.__init__(self, oasis_folder)
         self.oasis_folder = oasis_folder
-        self.csv_corpus = []
+        self.load_csv()
 
     def load_csv(self):
-        # Read dialogue files from Oasis
+        # check whether the oasis_folder contains a valid Oasis installation
+        try:
+            assert os.path.exists(self.oasis_folder)  # folder exists
+            assert os.path.exists(self.oasis_folder + "/Data/Lancs_BT150")  # dialogs folders exist
+            assert os.path.exists(self.oasis_folder + "/Data/Lancs_BT150/075812009.a.lturn.xml")  # DA files exist
+        except AssertionError:
+            print("[WARNING] The folder " + self.oasis_folder + " does not contain some important files for the corpus")
+            print("Check http://groups.inf.ed.ac.uk/oasis/ for info on how to obtain the complete SWDA corpus.")
+            print("")
+            self.csv_corpus = None
+            return
+
         dialogs = self.create_dialogs()
         self.csv_corpus = self.create_csv(dialogs)
 
@@ -57,7 +60,7 @@ class Oasis(Corpus):
         tag = segment.attrib["sp-act"]
         try:
             wFile = segment[0].attrib["href"].split("#")[0]
-        except:
+        except IndexError:
             return
         ids = segment[0].attrib["href"].split("#")[1]
         start_id = ids.split("(")[1].split(")")[0]
@@ -88,7 +91,7 @@ class Oasis(Corpus):
                 try:
                     prevTag = dialogs[d][segm][-1][1]
                     prevType = dialogs[d][segm][-1][2]
-                except:  # no prev in this segment
+                except IndexError:  # no prev in this segment
                     pass
         return csv_corpus
 

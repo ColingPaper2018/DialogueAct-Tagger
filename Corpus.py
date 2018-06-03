@@ -3,7 +3,8 @@ import csv
 
 class Corpus:
     def __init__(self, corpus_folder):
-        raise NotImplementedError()
+        self.csv_corpus = []
+        pass
 
     def load_csv(self):
         raise NotImplementedError()
@@ -17,7 +18,6 @@ class Corpus:
                 csv_out = csv.writer(out)
                 for row in self.csv_corpus:
                     csv_out.writerow(row)
-        return self.csv_corpus
 
     def dump_iso_dimension_task_csv(self, out_file=None):
         return_csv = []

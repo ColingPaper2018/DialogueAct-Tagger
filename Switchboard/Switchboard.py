@@ -10,20 +10,23 @@ to dump the corpus in CSV format with original annotation and with ISO annotatio
 
 class Switchboard(Corpus):
     def __init__(self, switchboard_folder, estimator):
-        # check whether the ami_folder contains a valid AMI installation
-        try:
-            assert os.path.exists(switchboard_folder)  # folder exists
-            assert os.path.exists(switchboard_folder + "/sw00utt")  # dialogs folders exist
-            assert os.path.exists(switchboard_folder + "/sw00utt/sw_0001_4325.utt")  # DA files exist
-        except AssertionError:
-            print("The folder " + switchboard_folder + " does not contain some important files from the corpus.")
-            print("Check https://catalog.ldc.upenn.edu/ldc97s62 for info on how to obtain the complete SWDA corpus.")
-            exit(1)
+        Corpus.__init__(self, switchboard_folder)
         self.switchboard_folder = switchboard_folder
         self.estimator = estimator
-        self.csv_corpus = []
+        self.load_csv()
 
     def load_csv(self):
+        # check whether the Switchboard contains a valid AMI installation
+        try:
+            assert os.path.exists(self.switchboard_folder)  # folder exists
+            assert os.path.exists(self.switchboard_folder + "/sw00utt")  # dialogs folders exist
+            assert os.path.exists(self.switchboard_folder + "/sw00utt/sw_0001_4325.utt")  # DA files exist
+        except AssertionError:
+            print("[WARNING] The folder " + self.switchboard_folder + " does not contain some important files.")
+            print("Check https://catalog.ldc.upenn.edu/ldc97s62 for info on how to obtain the complete SWDA corpus.")
+            print("")
+            self.csv_corpus = None
+            return
         # Read dialogue files from Switchboard
         filelist = self.create_filelist()
         self.csv_corpus = self.create_csv(filelist)

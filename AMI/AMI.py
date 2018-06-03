@@ -11,21 +11,26 @@ to dump the corpus in CSV format with original annotation and with ISO annotatio
 class AMI(Corpus):
 
     def __init__(self, ami_folder):
-        # check whether the ami_folder contains a valid AMI installation
-        try:
-            assert os.path.exists(ami_folder)  # folder exists
-            assert os.path.exists(ami_folder + "/words/ES2002a.A.words.xml")  # words files exist
-            assert os.path.exists(ami_folder + "/dialogueActs/ES2002a.A.dialog-act.xml")  # DA files exist
-        except AssertionError:
-            print("The folder " + ami_folder + " does not contain some important files from the corpus.")
-            print("You can download a complete version of the corpus at http://groups.inf.ed.ac.uk/ami/download/")
-            exit(1)
+        Corpus.__init__(self, ami_folder)
         self.ami_folder = ami_folder
-        self.csv_corpus = []
+        self.load_csv()
 
     def load_csv(self):
+
+        # Check that the corpus files are there
+        try:
+            assert os.path.exists(self.ami_folder)  # folder exists
+            assert os.path.exists(self.ami_folder + "/words/ES2002a.A.words.xml")  # words files exist
+            assert os.path.exists(self.ami_folder + "/dialogueActs/ES2002a.A.dialog-act.xml")  # DA files exist
+        except AssertionError:
+            print("[WARNING] The folder " + self.ami_folder + " does not contain some important files from the corpus.")
+            print("You can download a complete version of the corpus at http://groups.inf.ed.ac.uk/ami/download/")
+            print("")
+            self.csv_corpus = None
+            return
+
         dialogs = {}  # this will store dialogs from the corpus
-        dialog_names = []  # this will store filenames from the corpus
+        dialog_names = []  # this will store file names from the corpus
         for dialog_name in os.listdir(self.ami_folder + "/dialogueActs/"):
             if "dialog-act" in dialog_name:  # DA file
                 dialog_names.append(dialog_name.split("dialog-act")[0])
@@ -71,7 +76,7 @@ class AMI(Corpus):
                     for w in set:
                         try:
                             dialogs[dialog_name][w].append(dact)
-                        except:
+                        except KeyError:
                             continue
 
     def load_segments(self, dialogs, dialog_name):
@@ -85,7 +90,7 @@ class AMI(Corpus):
                     # 4.2 Get the range of IDs to be queried
                     try:
                         stop_id = ids.split("..")[1].split("(")[1].split(")")[0].split("words")[1]
-                    except:
+                    except IndexError:
                         stop_id = start_id
                     start_n = int(start_id)
                     stop_n = int(stop_id)
@@ -94,7 +99,7 @@ class AMI(Corpus):
                     for w in set:
                         try:
                             dialogs[dialog_name][w].append(str(segment))
-                        except:
+                        except KeyError:
                             continue
                 segment += 1
 
@@ -108,10 +113,9 @@ class AMI(Corpus):
             for word in dialogs[d]:
                 try:
                     word, DA, segment = dialogs[d][word]
-                except:
+                except ValueError:
                     continue
-                if (
-                        DA != currentDA or current_segment != segment) and sentence != "":  # new DA or segment: print sentence
+                if (DA != currentDA or current_segment != segment) and sentence != "":  # new DA or segment
                     csv_corpus.append((sentence.strip().replace("&#39;", "'"), currentDA, prevDA, segment, None, None))
                     sentence = ""
                     prevDA = currentDA
