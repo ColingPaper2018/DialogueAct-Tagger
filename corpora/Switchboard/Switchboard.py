@@ -2,6 +2,11 @@ import os
 import re
 from corpora.Corpus import Corpus
 from .DAMSL import DAMSL
+import logging
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("ISO_DA")
+
 
 """
 Switchboard class: loads the corpus into tuples (sentence,DA,prevDA). Provides methods
@@ -26,9 +31,9 @@ class Switchboard(Corpus):
             assert os.path.exists(self.switchboard_folder + "/sw00utt")  # dialogs folders exist
             assert os.path.exists(self.switchboard_folder + "/sw00utt/sw_0001_4325.utt")  # DA files exist
         except AssertionError:
-            print("[WARNING] The folder " + self.switchboard_folder + " does not contain some important files.")
-            print("Check https://catalog.ldc.upenn.edu/ldc97s62 for info on how to obtain the complete SWDA corpus.")
-            print("")
+            logging.warning("The folder " + self.switchboard_folder + " does not contain some important files.")
+            logging.info("Check https://catalog.ldc.upenn.edu/ldc97s62 "
+                         "for info on how to obtain the complete SWDA corpus.")
             self.csv_corpus = None
             return
         # Read dialogue files from Switchboard

@@ -1,6 +1,10 @@
 import os
 from corpora.Corpus import Corpus
 
+import logging
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("ISO_DA")
 """
 VerbMobil class: loads the corpus into tuples (sentence,DA,prevDA). Provides methods
 to dump the corpus in CSV format with original annotation and with ISO annotation
@@ -28,9 +32,8 @@ class VerbMobil(Corpus):
             assert os.path.exists(self.verbmobil_folder + "/e001a")  # dialog folders exist
             assert os.path.exists(self.verbmobil_folder + "/e001a/e001ach1_001_SMA.par")  # DA files exist
         except AssertionError:
-            print("[WARNING] The folder " + self.verbmobil_folder + " does not contain some important files.")
-            print("Look at https://www.phonetik.uni-muenchen.de/Bas/BasVM2eng.html for more information")
-            print("")
+            logger.warning("The folder " + self.verbmobil_folder + " does not contain some important files.")
+            logger.info("Look at https://www.phonetik.uni-muenchen.de/Bas/BasVM2eng.html for more information")
             self.csv_corpus = None
             return
 

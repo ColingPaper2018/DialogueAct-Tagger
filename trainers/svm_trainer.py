@@ -37,7 +37,6 @@ class SVMTrain(Trainer):
     @staticmethod
     def build_features(tagged_utterances, indexed_pos=True, indexed_dep=False,
                        ngrams=True, dep=True, prev=True, nlp_inst=None):
-
         if nlp_inst is None:
             nlp_inst = spacy.load("en")
         dimension_features = []
@@ -92,7 +91,6 @@ class SVMTrain(Trainer):
             logger.error(f"Not enough data to train the {out_file} classifier! Please check README.md for "
                          f"more information on how to obtain more data")
             return
-        print(som_dataset)
         self.train_classifier(som_dataset,
                               self.build_features(som_dataset),
                               os.path.join(out_file, "som_model"),

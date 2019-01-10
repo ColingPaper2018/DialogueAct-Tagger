@@ -1,7 +1,10 @@
 import os
 from collections import OrderedDict
 from corpora.Corpus import Corpus
+import logging
 
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("ISO_DA")
 """
 Maptask class: loads the corpus into tuples (sentence,DA,prevDA). Provides methods
 to dump the corpus in CSV format with original annotation and with ISO annotation
@@ -25,9 +28,9 @@ class Maptask(Corpus):
             assert os.path.exists(self.maptask_folder + "/Data/timed-units/")  # timed-units folder exists
             assert os.path.exists(self.maptask_folder + "/Data/timed-units/q1ec1.f.timed-units.xml")  # DA files exist
         except AssertionError:
-            print("[WARNING] The folder " + self.maptask_folder + " does not contain some files from the corpus.")
-            print("You can download a complete version at http://groups.inf.ed.ac.uk/maptask/maptasknxt.html")
-            print("")
+            logger.warning(" The folder " + self.maptask_folder +
+                           " does not contain some files from the corpus.")
+            logger.info("You can download a complete version at http://groups.inf.ed.ac.uk/maptask/maptasknxt.html")
             self.csv_corpus = None
             return
 
