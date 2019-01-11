@@ -1,9 +1,6 @@
 .idea/
 .DS_Store
 models
-AMI/corpus
-Switchboard/SWDA
-Oasis/corpus
-maptaskv2-1
 __pycache*
+data
 

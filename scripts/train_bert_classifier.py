@@ -19,9 +19,11 @@ def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     torch.cuda.get_device_name(0)
     
-    print("Loading tokenised data")
+    print("Loading padded, tokenised data")
 
     input_ids, tags, tags_vals, tag2idx = diactag.corpus.data(bert_config.data_spec)
+
+    print("splitting into folds and ")
 
     attention_masks = [[float(i>0) for i in ii] for ii in input_ids]
     tr_inputs, val_inputs, tr_tags, val_tags = train_test_split(input_ids, tags, 
@@ -37,11 +39,13 @@ def main():
 
     train_data = TensorDataset(tr_inputs, tr_masks, tr_tags)
     train_sampler = RandomSampler(train_data)
-    train_dataloader = DataLoader(train_data, sampler=train_sampler, batch_size=bs)
+    train_dataloader = DataLoader(train_data, sampler=train_sampler,
+                            bert_config.batch_size)
 
     valid_data = TensorDataset(val_inputs, val_masks, val_tags)
     valid_sampler = SequentialSampler(valid_data)
-    valid_dataloader = DataLoader(valid_data, sampler=valid_sampler, batch_size=bs)
+    valid_dataloader = DataLoader(valid_data, sampler=valid_sampler,
+                            bert_config.batch_size)
 
     if bert_config.output_type == "sentence":
         train_dl, valid_dl, test_dl = SentDataLoader(bert_config)

@@ -1,7 +1,10 @@
 import os
 from lxml import etree
 from corpora.Corpus import Corpus
+import logging
 
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("ISO_DA")
 """
 Oasis class: loads the corpus into tuples (sentence,DA,prevDA). Provides methods
 to dump the corpus in CSV format with original annotation and with ISO annotation
@@ -24,9 +27,9 @@ class Oasis(Corpus):
             assert os.path.exists(self.oasis_folder + "/Data/Lancs_BT150")  # dialogs folders exist
             assert os.path.exists(self.oasis_folder + "/Data/Lancs_BT150/075812009.a.lturn.xml")  # DA files exist
         except AssertionError:
-            print("[WARNING] The folder " + self.oasis_folder + " does not contain some important files for the corpus")
-            print("Check http://groups.inf.ed.ac.uk/oasis/ for info on how to obtain the complete SWDA corpus.")
-            print("")
+            logger.warning(" The folder " + self.oasis_folder +
+                           "does not contain some important files for the corpus")
+            logger.info("Check http://groups.inf.ed.ac.uk/oasis/ for info on how to obtain the complete Oasis corpus.")
             self.csv_corpus = None
             return
 

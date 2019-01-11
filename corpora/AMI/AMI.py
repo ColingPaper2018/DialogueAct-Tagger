@@ -1,7 +1,10 @@
 import os
 from collections import OrderedDict
 from corpora.Corpus import Corpus
+import logging
 
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("ISO_DA")
 """
 AMI class: loads the corpus into tuples (sentence,DA,prevDA). Provides methods
 to dump the corpus in CSV format with original annotation and with ISO annotation
@@ -26,9 +29,9 @@ class AMI(Corpus):
             assert os.path.exists(self.ami_folder + "/words/ES2002a.A.words.xml")  # words files exist
             assert os.path.exists(self.ami_folder + "/dialogueActs/ES2002a.A.dialog-act.xml")  # DA files exist
         except AssertionError:
-            print("[WARNING] The folder " + self.ami_folder + " does not contain some important files from the corpus.")
-            print("You can download a complete version of the corpus at http://groups.inf.ed.ac.uk/ami/download/")
-            print("")
+            logger.warning("The folder " + self.ami_folder +
+                           " does not contain some important files from the corpus.")
+            logger.info("You can download a complete version of the corpus at http://groups.inf.ed.ac.uk/ami/download/")
             self.csv_corpus = None
             return
 
@@ -47,7 +50,7 @@ class AMI(Corpus):
     def load_words(self, dialogs, dialog_name):
         with open(self.ami_folder + "/words/" + dialog_name + "words.xml") as wfile:
             for line in wfile:
-                if not "<w" in line:  # not a word
+                if "<w" not in line:  # not a word
                     continue
                 elif "punc=" in line:  # punctuation
                     continue

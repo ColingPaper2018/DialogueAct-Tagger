@@ -176,3 +176,24 @@ class Corpus:
                 return tuple([corpus_tuple[0]] + [da, prevDA] + list(corpus_tuple[2:]))
             else:
                 return None
+
+    def dataload(self, tokenizer):
+        segment = "-1"
+        x = []
+        y = []
+        for datapoint in self.csv_corpus:
+            if datapoint[3] != segment and segment != "-1" and len(x) > 0:
+                yield (x, y)
+                x = []
+                y = []
+            segment = datapoint[3]
+            dimension, cf = self.da_to_dimension(datapoint), self.da_to_cf(datapoint)
+            if dimension is None or cf is None:
+                x = []
+                y = []
+            else:
+                tokenized = tokenizer(datapoint[0])
+                x.extend([tok for tok in tokenized])
+                y.extend([[(dimension, cf)] for tok in tokenized])
+
+
