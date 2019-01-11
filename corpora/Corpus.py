@@ -4,7 +4,30 @@ import csv
 class Corpus:
     def __init__(self, corpus_folder):
         self.csv_corpus = []
-        pass
+        self.tag_to_idx = {
+            "Task:Statement": 0,
+            "Task:PropQ": 1,
+            "Task:SetQ": 2,
+            "Task:ChoiceQ": 3,
+            "Task:Directive": 4,
+            "Task:Commissive": 5,
+            "SOM:Thanking": 6,
+            "SOM:Salutation": 7,
+            "SOM:Apology": 8,
+            "FB:Feedback": 9
+        }
+        self.tags = [
+            "Task:Statement",
+            "Task:PropQ",
+            "Task:SetQ",
+            "Task:ChoiceQ",
+            "Task:Directive",
+            "Task:Commissive",
+            "SOM:Thanking",
+            "SOM:Salutation",
+            "SOM:Apology",
+            "FB:Feedback"
+        ]
 
     def load_csv(self):
         raise NotImplementedError()
@@ -179,6 +202,8 @@ class Corpus:
 
     def dataload(self, tokenizer, multilabel=False):
         segment = "-1"
+        input_ids = []
+        tags = []
         x = []
         y = []
         for datapoint in self.csv_corpus:
@@ -197,6 +222,6 @@ class Corpus:
                 if multilabel:
                     y.extend([[(dimension, cf)] for tok in tokenized])
                 else:
-                    y = dimension+cf
-
+                    y = dimension + cf
+        return input_ids, tags, self.tags, self.tag_to_idx
 
