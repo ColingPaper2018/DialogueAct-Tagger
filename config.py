@@ -70,7 +70,7 @@ class BertConfig:
         self.lower_case = True
         self.weight_decay_rate = 0.01
         self.learning_rate = 3e-5
-        self.n_epochs = 20
+        self.n_epochs = 4
         self.clip_grad_norm = 1.0
         timestamp = datetime.datetime.fromtimestamp(time.time()).strftime('%Y%m%d_%H%M%S')
         self.save_path = os.path.join(os.path.abspath("."), "models/bert", timestamp)
@@ -104,9 +104,4 @@ class BertConfig:
         conf.fine_tuning = config_dict.get("fine_tuning")
         conf.lower_case = config_dict.get("lower_case")
         conf.batch_size = config_dict.get("batch_size")
-
-        # Folders and files
-        conf.relative_glove_filename = config_dict.get("relative_glove_filename")
-        conf.relative_dataset_file = config_dict.get("relative_dataset_file")
-        conf
 
