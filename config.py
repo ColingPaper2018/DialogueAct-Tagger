@@ -7,6 +7,29 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("ISO_DA")
 
 
+def tag_to_index(tag):
+    if tag == "Task:Statement":
+        return 0
+    elif tag == "Task:PropQ":
+        return 1
+    elif tag == "Task:SetQ":
+        return 3
+    elif tag == "Task:ChoiceQ":
+        return 4
+    elif tag == "Task:Directive":
+        return 5
+    elif tag == "Task:Commissive":
+        return 6
+    elif tag == "SOM:Thanking":
+        return 7
+    elif tag == "SOM:Salutation":
+        return 8
+    elif tag == "SOM:Apology":
+        return 9
+    elif tag == "FB:Feedback":
+        return 10
+
+
 class Model(Enum):
     SVM = "SVM"
 

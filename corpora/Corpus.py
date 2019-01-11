@@ -177,7 +177,7 @@ class Corpus:
             else:
                 return None
 
-    def dataload(self, tokenizer):
+    def dataload(self, tokenizer, multilabel=False):
         segment = "-1"
         x = []
         y = []
@@ -194,6 +194,9 @@ class Corpus:
             else:
                 tokenized = tokenizer(datapoint[0])
                 x.extend([tok for tok in tokenized])
-                y.extend([[(dimension, cf)] for tok in tokenized])
+                if multilabel:
+                    y.extend([[(dimension, cf)] for tok in tokenized])
+                else:
+                    y = dimension+cf
 
 
