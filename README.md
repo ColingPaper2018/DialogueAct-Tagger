@@ -6,7 +6,7 @@ A resource to create an ISO-compliant Dialog Act Tagger using publicly available
 This repository contains a set of utilities which can be used to train and test a fully functional Dialogue Act Tagger compliant to the new ISO DA scheme. 
 This software only uses publicly available datasets to train the models. However, some of these resources may require authorizations before they are used. Please check that you have all the available data before using this code. You can find information on how to obtain the required corpora on their official websites:
 
-1. For Switchboard: https://catalog.ldc.upenn.edu/docs/LDC97S62/
+1. For Switchboard: https://catalog.ldc.upenn.edu/LDC97S62
 2. For Oasis BT: http://groups.inf.ed.ac.uk/oasis/
 3. For Maptask http://groups.inf.ed.ac.uk/maptask/
 4. For VerbMobil2: https://www.phonetik.uni-muenchen.de/Bas/BasVM2eng.html
