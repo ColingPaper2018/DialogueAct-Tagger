@@ -7,7 +7,7 @@ This repository contains a set of utilities which can be used to train and test 
 This software only uses publicly available datasets to train the models. However, some of these resources may require authorizations before they are used. Please check that you have all the available data before using this code. You can find information on how to obtain the required corpora on their official websites:
 
 1. For Switchboard: https://catalog.ldc.upenn.edu/LDC97S62
-2. For Oasis BT: http://groups.inf.ed.ac.uk/oasis/ (please note that Oasis BT's license has expired and thus to our knowledge the corpus is no longer available")
+2. For Oasis BT: http://groups.inf.ed.ac.uk/oasis/ (please note that Oasis BT's license has expired and thus to our knowledge the corpus is no longer available)
 3. For Maptask http://groups.inf.ed.ac.uk/maptask/
 4. For VerbMobil2: https://www.phonetik.uni-muenchen.de/Bas/BasVM2eng.html
 5. For AMI: http://groups.inf.ed.ac.uk/ami/corpus/
