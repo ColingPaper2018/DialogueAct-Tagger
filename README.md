@@ -1,5 +1,5 @@
 # ISO-Standard-DA
-A resource to create an ISO-compliant Dialog Act Tagger using publicly available data.
+A resource to create an ISO-compliant Dialogue Act Tagger using publicly available data.
 
 If you use our code, please cite our COLING 2018 paper ["ISO-Standard Domain-Independent Dialogue Act Tagging for
 Conversational Agents"](https://www.aclweb.org/anthology/C18-1300.pdf):
@@ -11,7 +11,7 @@ Mezza, S., Cervone, A., Stepanov, E., Tortoreto, G., & Riccardi, G. (2018, Augus
 This repository contains a set of utilities which can be used to train and test a fully functional Dialogue Act Tagger compliant to the new ISO DA scheme. 
 This software only uses publicly available datasets to train the models. However, some of these resources may require authorizations before they are used. Please check that you have all the available data before using this code. You can find information on how to obtain the required corpora on their official websites:
 
-1. For the Switchboard Dialog Act Corpus: https://web.stanford.edu/~jurafsky/swb1_dialogact_annot.tar.gz
+1. For the Switchboard Dialogue Act Corpus: https://web.stanford.edu/~jurafsky/swb1_dialogact_annot.tar.gz
 2. For Oasis BT: http://groups.inf.ed.ac.uk/oasis/ (please note that Oasis BT's license has expired and thus to our knowledge the corpus is no longer available)
 3. For Maptask http://groups.inf.ed.ac.uk/maptask/
 4. For VerbMobil2: https://www.phonetik.uni-muenchen.de/Bas/BasVM2eng.html
