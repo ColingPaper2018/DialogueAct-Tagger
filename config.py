@@ -1,7 +1,14 @@
 from enum import Enum
 from trainers.svm_trainer import SVMTrain
+from corpora.Oasis.Oasis import Oasis
+from corpora.Switchboard.Switchboard import Switchboard
+from corpora.AMI.AMI import AMI
+from corpora.VerbMobil.VerbMobil import VerbMobil
+from corpora.Maptask.Maptask import Maptask
+from pathlib import Path
 import logging
-import json
+import os, datetime, time, json
+
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("ISO_DA")
@@ -53,4 +60,48 @@ class Config:
         else:
             raise NotImplementedError(f"Model type {self.model_type} is not serializable")
         return c
+
+class BertConfig:
+    def __init__(self):
+        self.fine_tuning = "full"  # "full" means backprop into transformer
+        self.output_type = "token"  # sentence- or token-level 
+        self.batch_size = 32
+        self.device = "cpu"
+        self.lower_case = True
+        self.weight_decay_rate = 0.01
+        self.learning_rate = 3e-5
+        self.n_epochs = 4
+        self.clip_grad_norm = 1.0
+        timestamp = datetime.datetime.fromtimestamp(time.time()).strftime('%Y%m%d_%H%M%S')
+        self.save_path = os.path.join(os.path.abspath("."), "models/bert", timestamp)
+
+    def to_json(self):
+        with open(f"{self.save_path}/config.json", "w") as config_f:
+            json.dump({
+                # Model type
+                "model_type": self.model_type.name,
+                "weight_decay_rate": self.weight_decay_rate,
+                "learning_rate": self.learning_rate,
+                "clip_grad_norm": self.clip_grad_norm,
+                "n_epochs": self.n_epochs,
+                "fine_tuning": self.fine_tuning,
+                "lower_case": self.lower_case,
+                "batch_size": self.batch_size
+            }, config_f, indent=4)
+
+    @staticmethod
+    def from_json(json_file):
+        with open(json_file) as config_f:
+            config_dict = json.load(config_f)
+        conf = BertConfig()
+
+        # Model Type
+        conf.model_type = config_dict.get("model_type")
+        conf.weight_decay_rate = config_dict.get("weight_decay_rate")
+        conf.learning_rate = config_dict.get("learning_rate")
+        conf.clip_grad_norm = config_dict.get("clip_grad_norm")
+        conf.n_epochs = config_dict.get("n_epochs")
+        conf.fine_tuning = config_dict.get("fine_tuning")
+        conf.lower_case = config_dict.get("lower_case")
+        conf.batch_size = config_dict.get("batch_size")
 
