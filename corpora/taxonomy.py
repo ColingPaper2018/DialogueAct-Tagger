@@ -3,9 +3,21 @@ from typing import Union
 from dataclasses import dataclass
 
 
+class Layer(Enum):
+    Dimension = 0
+    CommFunction = 1
+
+
 class Taxonomy(Enum):
-    AMI = "AMI",
-    ISO = "ISO"
+    AMI = "ami",
+    ISO = "iso"
+
+    @staticmethod
+    def from_str(taxonomy: str) -> "Taxonomy":
+        for t in Taxonomy:
+            if t.value == taxonomy:
+                return t
+        raise NotImplementedError(f"Unknown taxonomy: {taxonomy}")
 
 
 # ISO Standard

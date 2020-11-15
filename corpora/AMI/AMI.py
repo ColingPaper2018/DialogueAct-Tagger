@@ -17,10 +17,10 @@ to dump the corpus in CSV format with original annotation and with ISO annotatio
 
 
 class AMI(Corpus):
-    def __init__(self, corpus_folder):
-        Corpus.__init__(self, corpus_folder)
+    def __init__(self, corpus_folder, taxonomy: Taxonomy):
+        Corpus.__init__(self, "AMI", corpus_folder, taxonomy)
         corpus = self.load_corpus(corpus_folder)
-        self.utterances = self.parse_corpus(corpus, Taxonomy.AMI)
+        self.utterances = self.parse_corpus(corpus)
 
     def validate_corpus(self, corpus_folder):
             return (os.path.exists(corpus_folder + "/words/ES2002a.A.words.xml")  # word files exist
@@ -102,7 +102,7 @@ class AMI(Corpus):
                     segment += 1
         return dialogs
 
-    def parse_corpus(self, dialogs, taxonomy: Taxonomy):
+    def parse_corpus(self, dialogs):
         parsed_corpus = []
         for d in dialogs:
             speaker_id = 0
@@ -119,17 +119,17 @@ class AMI(Corpus):
                     word, DA, segment = dialogs[d][word]
                 except ValueError:
                     continue
-                parsed_da = self.da_to_taxonomy(DA, taxonomy)
+                parsed_da = self.da_to_taxonomy(DA, self.taxonomy)
                 previous_da = previous_utterance.tags[0] if len(previous_utterance.tags) > 0 else None
                 if (parsed_da != previous_da or current_segment != segment) and sentence != "":  # new DA or segment
                     parsed_corpus.append(
                         Utterance(text=sentence.strip().replace("&#39;", "'"),
-                                  tags=self.da_to_taxonomy(DA, taxonomy),
+                                  tags=self.da_to_taxonomy(DA, self.taxonomy),
                                   context=[previous_utterance],
                                   speaker_id=speaker_id)
                     )
                     previous_utterance = Utterance(text=sentence.strip().replace("&#39;", "'"),
-                                                   tags=self.da_to_taxonomy(DA, taxonomy),
+                                                   tags=self.da_to_taxonomy(DA, self.taxonomy),
                                                    context=[previous_utterance],
                                                    speaker_id=speaker_id)
                     sentence = ""

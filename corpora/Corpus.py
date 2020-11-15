@@ -18,7 +18,7 @@ class Utterance:
 
 
 class Corpus:
-    def __init__(self, corpus_folder: str):
+    def __init__(self, name: str, corpus_folder: str, taxonomy: Taxonomy):
         """
         A corpus is a collection of utterances encoded with a certain taxonomy. Every corpus has a source folder
         with its raw files, a method to validate these files, a method to load them, and a method to convert them
@@ -27,7 +27,9 @@ class Corpus:
         """
         if not os.path.isdir(corpus_folder):
             raise FileNotFoundError(f"The provided folder ({corpus_folder}) does not exist")
+        self.name = name
         self.utterances: List[Utterance] = []
+        self.taxonomy = taxonomy
         return
 
     def validate_corpus(self, folder) -> bool:
@@ -36,7 +38,7 @@ class Corpus:
     def load_corpus(self, folder):
         raise NotImplementedError()
 
-    def parse_corpus(self, folder, taxonomy):
+    def parse_corpus(self, folder):
         raise NotImplementedError()
 
     @staticmethod

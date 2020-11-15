@@ -1,7 +1,7 @@
 from enum import Enum
-from trainers.svm_trainer import SVMTrain
+from sklearn.svm import LinearSVC
+from sklearn.calibration import CalibratedClassifierCV
 import logging
-import json
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("ISO_DA")
@@ -12,45 +12,45 @@ class Model(Enum):
 
 
 class Config:
-    def __init__(self, corpora):
-        self.model_type = Model.SVM
+    def __init__(self, model_type: Model):
+        self.model_type = model_type
         self.out_folder = "models/svm/"
         self.acceptance_threshold = 0.5
 
-        # NOTE adding corpora here will extend the dataset for training
-        self.corpora = corpora
-        logger.info("Corpora loaded succesfully! Loaded corpora:")
-        logger.info([corpus.get_corpus_name() for corpus in self.corpora if corpus.csv_corpus is not None])
-        
-    def get_trainer_inst(self):
-        if self.model_type == Model.SVM:
-            return SVMTrain(self.corpora)
-        else:
-            raise NotImplementedError("The required model type is not supported yet")
-
     @staticmethod
-    def from_json(json_file):
-        with open(json_file) as f:
-            c = Config([])
-            config = json.load(f)
-            c.out_folder = config['out_folder']
-            c.corpora = config['corpora']
-            c.acceptance_threshold = config['acceptance_threshold']
-            if config['model_type'] == "SVM":
-                c.model_type = Model.SVM
-                return c
-            else:
-                raise NotImplementedError(f"Model {config.model_type} is not supported")
+    def from_dict(dict_):
+        raise NotImplementedError()
 
     def to_dict(self):
-        c = {
-            "corpora": [c.get_corpus_name() for c in self.corpora],
-            "out_folder": self.out_folder,
-            "acceptance_threshold": self.acceptance_threshold
-        }
-        if self.model_type == Model.SVM:
-            c['model_type'] = "SVM"
-        else:
-            raise NotImplementedError(f"Model type {self.model_type} is not serializable")
-        return c
+        raise NotImplementedError()
 
+
+class SVMConfig(Config):
+    def __init__(self, indexed_pos: bool, indexed_dep: bool,
+                 ngrams: bool, dep: bool, prev: bool):
+        Config.__init__(self, Model.SVM)
+        self.classifier = CalibratedClassifierCV(LinearSVC(C=0.1), cv=3)
+        self.indexed_pos = indexed_pos
+        self.indexed_dep = indexed_dep
+        self.ngrams = ngrams
+        self.dep = dep
+        self.prev = prev
+
+    @staticmethod
+    def from_dict(dict_):
+        return SVMConfig(
+            indexed_pos=dict_['indexed_pos'],
+            dep=dict_['dep'],
+            prev=dict_['prev'],
+            indexed_dep=dict_['indexed_dep'],
+            ngrams=dict_['ngrams'],
+        )
+
+    def to_dict(self):
+        return {
+            "indexed_pos": self.indexed_pos,
+            "dep": self.dep,
+            "ngrams": self.ngrams,
+            "prev": self.prev,
+            "indexed_dep": self.indexed_dep
+        }
