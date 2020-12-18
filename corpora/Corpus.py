@@ -1,6 +1,6 @@
 import os
 
-from typing import List
+from typing import List, Union
 from corpora.taxonomy import Tag, Taxonomy
 
 
@@ -9,7 +9,7 @@ class Utterance:
     Utterance provides an interface to interact with the individual
     sentences of a corpus
     """
-    def __init__(self, text: str, tags: List[Tag],
+    def __init__(self, text: str, tags: List[Union[Tag, str]],
                  context: List["Utterance"], speaker_id: int):
         self.text = text
         self.tags = tags

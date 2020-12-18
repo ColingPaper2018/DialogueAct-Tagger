@@ -1,18 +1,14 @@
 import os
 import pickle
 from sklearn.pipeline import Pipeline, FeatureUnion
-from sklearn.feature_extraction.text import CountVectorizer
-from sklearn.feature_extraction import DictVectorizer
 from taggers.svm_tagger import SVMTagger
 from config import SVMConfig
 from corpora.Corpus import Utterance
-from corpora.taxonomy import Layer, Taxonomy, ISODimension
 from typing import List
+import json
 
-from ItemSelector import ItemSelector
 from .trainer import Trainer
 from pathlib import Path
-import spacy
 import logging
 
 
@@ -21,41 +17,24 @@ logger = logging.getLogger("ISO_DA")
 
 
 class SVMTrainer(Trainer):
-    def __init__(self, corpora_list, config: SVMConfig):
-        Trainer.__init__(self, corpora_list, config)
+    def __init__(self, config: SVMConfig):
+        Trainer.__init__(self, config, config.taxonomy)
+        for c in config.corpora_list:
+            try:
+                self.corpora.append(c[0](c[1], config.taxonomy))
+            except Exception as e:
+                logger.warning(f"Corpus {c[0]} not loaded. {e}")
 
     @staticmethod
-    def build_features(tagged_utterances: List[Utterance], config: SVMConfig, layer: Layer,
-                       nlp_inst=None):
-        if nlp_inst is None:
-            nlp_inst = spacy.load("en")
-        dimension_features = []
-        docs = nlp_inst.pipe([utt.text for utt in tagged_utterances])
-        for idx, (utt, doc) in enumerate(zip(tagged_utterances, docs)):
-            features = {"word_count": utt.text.lower(), "labels": {}}
-            for i, tok in enumerate(doc):
-                if config.indexed_pos:
-                    features["labels"]["pos_" + tok.tag_] = True
-                if config.dep:
-                    features["labels"][tok.dep_] = True
-                if config.indexed_dep:
-                    features["labels"]["pos_" + tok.dep_] = True
-            if config.prev:
-                features["prev_" + (tagged_utterances[idx - 1].tags[0] if idx > 0 else "Other")] = True
-            dimension_features.append(features)
-        wordcount_pipeline = Pipeline([
-            ('selector', ItemSelector(key='word_count')),
-            ('vectorizer', CountVectorizer(ngram_range=(1, 2)))
-        ])
-        label_pipeline = Pipeline([
-            ('selector', ItemSelector(key='labels')),
-            ('vectorizer', DictVectorizer())
-        ])
-        return dimension_features, [wordcount_pipeline, label_pipeline]
-
-    @staticmethod
-    def train_pipeline(config: SVMConfig, layer: Layer, dataset: List[Utterance]):
-        features = SVMTrainer.build_features(dataset, config, layer=layer)
+    def train_pipeline(config: SVMConfig, dataset: List[Utterance]):
+        if all(len(u.tags) == 1 for u in dataset) and all(u.tags[0] == dataset[0].tags[0] for u in dataset):
+            logger.warning(f"The only tag available for this classifier is {dataset[0].tags[0]}."
+                           "The classifier will still be trained, but it won't recognise any other labels."
+                           "Please provide additional data to obtain a working classifier. You can check README.md "
+                           "for information on how to obtain more data")
+            for _ in range(0, 3):
+                dataset.append(Utterance(text="<<unk>>", context=[], tags=["<<unk>>"], speaker_id=0))
+        features = SVMTagger.build_features(dataset, config)
         train_pipeline = Pipeline([
             # Use FeatureUnion to combine the features from wordcount and labels
             ('union', FeatureUnion(
@@ -65,44 +44,59 @@ class SVMTrainer(Trainer):
             ('classifier', config.classifier)
         ])
         if len(dataset) == 0:
-            logger.error(f"Not enough data to train the {out_file} classifier! Please check README.md for "
+            logger.error(f"Not enough data to train the classifier! Please check README.md for "
                          f"more information on how to obtain more data")
             return
-        train_pipeline.fit(features[0], [utt[1] for utt in dataset])
+        train_pipeline.fit(features[0], [u.tags for u in dataset])
+        for _ in range(1, 4):
+            del(dataset[-1])
         return train_pipeline
 
-    def train(self, out_file: str):
+    def dump_model(self, pipelines: dict):
+        # Create directory
+        path = Path(os.path.dirname(self.config.out_folder))
+        path.mkdir(parents=True, exist_ok=True)
+
+        # Save the config file
+        with open(f"{self.config.out_folder}/config.json", "w") as f:
+            json.dump(self.config.to_dict(), f, indent=4)
+
+        # Save the pipelines
+        for pipeline in pipelines.keys():
+            pickle.dump(pipelines[pipeline], open(f"{self.config.out_folder}/{pipeline}", 'wb'))
+        return
+
+    def train(self, dump=True):
         logger.info(f"Training Dialogue Act Tagger for {self.config.taxonomy} taxonomy, using the following corpora:"
                     f"{[c.name for c in self.corpora]}")
         dataset = []
+        pipelines = {}
+
         for corpus in self.corpora:
-            dataset = dataset + corpus.utterances
-
-        if self.config.taxonomy == Taxonomy.AMI:
-            train_pipeline = self.train_pipeline(self.config, Layer.CommFunction, dataset)
-            path = Path(os.path.dirname(out_file))
-            path.mkdir(parents=True, exist_ok=True)
-            pickle.dump(train_pipeline, open(out_file, 'wb'))
-            return SVMTagger(os.path.dirname(out_file))
-        elif self.config.taxonomy == Taxonomy.ISO:
+                dataset = dataset + corpus.utterances
+        if "dimension" in self.config.taxonomy.value.__annotations__.keys():
             # Train dimension tagger
-            dimension_pipeline = self.train_pipeline(self.config, Layer.Dimension, dataset)
+            logger.info("Training dimension pipeline")
+            dimension_dataset = SVMTagger.stringify_tags(dataset, "dimension")
+            pipelines['dimension'] = self.train_pipeline(self.config, dimension_dataset)
 
-            # Train task tagger
-            task_dataset = [u for u in dataset if u.tags.dimension == ISODimension.Task]
-            task_pipeline = self.train_pipeline(self.config, Layer.CommFunction, task_dataset)
-
-            # Train som tagger
-            som_dataset = [u for u in dataset if u.tags.dimension == ISODimension.SocialObligation]
-            som_pipeline = self.train_pipeline(self.config, Layer.CommFunction, som_dataset)
-            path = Path(os.path.dirname(out_file))
-            path.mkdir(parents=True, exist_ok=True)
-            pickle.dump(dimension_pipeline, open(f"{out_file}_dim", 'wb'))
-            pickle.dump(task_pipeline, open(f"{out_file}_task", 'wb'))
-            pickle.dump(som_pipeline, open(f"{out_file}_som", 'wb'))
-
-
-
-
-
+            # Train a comm-function classifier for each dimension
+            dimension_labels = [
+                [tag for tag in utt.tags]
+                for utt in dimension_dataset
+            ]
+            dimension_values = list(set([label for tagset in dimension_labels for label in tagset]))
+            for dimension_value in dimension_values:
+                logger.info(f"Training communication function pipeline for dimension {dimension_value}")
+                comm_dataset = SVMTagger.stringify_tags(dataset, "comm_function",
+                                                        filter_attr="dimension", filter_value=dimension_value)
+                pipelines[f'comm_{dimension_value}'] = self.train_pipeline(self.config, comm_dataset)
+        else:
+            logger.info("Training unified communication function pipeline")
+            comm_dataset = SVMTagger.stringify_tags(dataset, "comm_function")
+            pipelines['comm_all'] = self.train_pipeline(self.config, comm_dataset)
+        self.config.pipeline_files = list(pipelines.keys())
+        if dump:
+            self.dump_model(pipelines)
+        return SVMTagger(self.config)
 

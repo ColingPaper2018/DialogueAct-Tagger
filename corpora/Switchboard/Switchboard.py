@@ -1,9 +1,10 @@
 import os
 import re
 from corpora.Corpus import Corpus
-from .DAMSL import DAMSL
 import logging
-
+from corpora.taxonomy import Taxonomy, ISOTag, ISODimension, ISOTaskFunction, ISOFeedbackFunction, ISOSocialFunction, SWDAFunction, SWDATag, Tag
+from typing import List
+from corpora.Corpus import Utterance
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("ISO_DA")
 
@@ -15,58 +16,55 @@ to dump the corpus in CSV format with original annotation and with ISO annotatio
 
 
 class Switchboard(Corpus):
-    def __init__(self, switchboard_folder):
-        Corpus.__init__(self, switchboard_folder)
-        self.switchboard_folder = switchboard_folder
-        self.estimator = DAMSL()
-        self.load_csv()
+    def __init__(self, switchboard_folder, taxonomy: Taxonomy):
+        Corpus.__init__(self, "Switchboard", switchboard_folder, taxonomy)
+        corpus = self.load_corpus(switchboard_folder)
+        self.utterances = self.parse_corpus(corpus)
 
-    def get_corpus_name(self):
-        return "SwitchboardDA"
+    def validate_corpus(self, folder):
+        return os.path.exists(folder) and os.path.exists(f"{folder}/sw00utt") \
+               and os.path.exists(f"{folder}/sw00utt/sw_0001_4325.utt")
 
-    def load_csv(self):
+    def load_corpus(self, folder):
         # check whether the folder contains a valid Switchboard installation
         try:
-            assert os.path.exists(self.switchboard_folder)  # folder exists
-            assert os.path.exists(self.switchboard_folder + "/sw00utt")  # dialogs folders exist
-            assert os.path.exists(self.switchboard_folder + "/sw00utt/sw_0001_4325.utt")  # DA files exist
+            assert self.validate_corpus(folder)
         except AssertionError:
-            logging.warning("The folder " + self.switchboard_folder + " does not contain some important files.")
+            logging.warning(f"The folder {folder} does not contain some important files.")
             logging.info("Check https://catalog.ldc.upenn.edu/ldc97s62 "
                          "for info on how to obtain the complete SWDA corpus.")
-            self.csv_corpus = None
             return
         # Read dialogue files from Switchboard
-        filelist = self.create_filelist()
-        self.csv_corpus = self.create_csv(filelist)
-
-    def create_filelist(self):
         filelist = []
-        for folder in os.listdir(self.switchboard_folder):
-            if folder.startswith("sw"):  # dialog folder
-                for filename in os.listdir(self.switchboard_folder + "/" + folder):
+        for file_folder in os.listdir(folder):
+            if file_folder.startswith("sw"):  # dialog folder
+                for filename in os.listdir(folder + "/" + file_folder):
                     if filename.startswith("sw"):  # dialog file
-                        filelist.append(self.switchboard_folder + "/" + folder + "/" + filename)
-        return filelist
-
-    def create_csv(self, filelist):
-        csv_corpus = []
+                        filelist.append(folder + "/" + file_folder + "/" + filename)
+        conversations = {}
         for filename in filelist:
-            prev_speaker = None
-            segment = 0
-            prev_DAs = {"A": "%", "B": "%"}
             with open(filename) as f:
                 utterances = f.readlines()
-            for line in utterances:
+            conversations[filename] = utterances
+        return conversations
+
+    def parse_corpus(self, conversations):
+        utterances = []
+        for filename in conversations.keys():
+            prev_speaker = None
+            segment = 0
+            prev_tags = {0: self.da_to_taxonomy("%", self.taxonomy, []), 1: self.da_to_taxonomy("%", self.taxonomy, [])}
+            prev_texts = {0: "", 1: ""}
+            for line in conversations[filename]:
                 line = line.strip()
                 try:
                     sentence = line.split("utt")[1].split(":")[1]
                     sw_tag = line.split("utt")[0].split()[0]
                     if "A" in line.split("utt")[0]:  # A speaking
-                        speaker = "A"
+                        speaker = 0
                     else:
-                        speaker = "B"
-                except:  # not an SWDA utterance format: probably a header line
+                        speaker = 1
+                except IndexError:  # not an SWDA utterance format: probably a header line
                     continue
                 if speaker != prev_speaker:
                     prev_speaker = speaker
@@ -75,47 +73,100 @@ class Switchboard(Corpus):
                                   sentence)  # this REGEX removes prosodic information and disfluencies
                 sentence = re.sub(r'\W+', ' ', sentence)  # this REGEX removes non alphanumeric characters
                 sentence = ' '.join(sentence.split())  # this is just to make extra spaces collapse
-                DA_tag = self.estimator.sw_to_damsl(sw_tag, prev_DAs[speaker])
-                csv_corpus.append((sentence, DA_tag, prev_DAs[speaker], segment, None, None))
-                prev_DAs[speaker] = DA_tag
-        return csv_corpus
+                tags = self.da_to_taxonomy(sw_tag, self.taxonomy, prev_tags[speaker])
+                utterances.append(Utterance(text=sentence, tags=tags,
+                                            context=[Utterance(prev_texts[speaker], prev_tags[speaker], [], speaker)],
+                                            speaker_id=speaker))
+                prev_tags[speaker] = tags
+                prev_texts[speaker] = sentence
+        return utterances
 
     @staticmethod
-    def da_to_dimension(corpus_tuple):
-        da = corpus_tuple[1]
-        if da in ["statement-non-opinion", "statement-opinion", "rhetorical-questions", "hedge", "or-clause",
-                  "wh-question", "declarative-wh-question", "backchannel-in-question-form", "yes-no-question",
-                  "declarative-yn-question", "tag-question", "offers-options-commits", "action-directive"]:
-            return "Task"
-        elif da in ["thanking", "apology", "downplayer", "conventional-closing"]:
-            return "SocialObligationManagement"
-        elif da in ["signal-non-understanding", "acknowledge", "appreciation"]:
-            return "Feedback"
+    def da_to_taxonomy(dialogue_act: str, taxonomy: Taxonomy, context: List[Tag]) -> List[Tag]:
+        if dialogue_act == "+":
+            new_tag = context
         else:
-            return None
-
-    @staticmethod
-    def da_to_cf(corpus_tuple):
-        da = corpus_tuple[1]
-        if da in ["statement-non-opinion"]:
-            return "Statement"
-        if da == "or-clause":
-            return "ChoiceQ"
-        elif da in ["wh-question", "declarative-wh-question"]:
-            return "SetQ"
-        elif da in ["backchannel-in-question-form", "yes-no-question", "declarative-yn-question", "tag-question"]:
-            return "PropQ"
-        elif da == "offers-options-commits":
-            return "Commissive"
-        elif da == "action-directive":
-            return "Directive"
-        elif da in ["thanking"]:
-            return "Thanking"
-        elif da in ["apology", "downplayer"]:
-            return "Apology"
-        elif da in "conventional-closing":
-            return "Salutation"
-        elif da in ["signal-non-understanding", "acknowledge", "appreciation"]:
-            return "Feedback"
-        else:
-            return None
+            if taxonomy == Taxonomy.SWDA:
+                mapping_dict = {
+                    "sd": [SWDATag(comm_function=SWDAFunction.StatementNonOpinion)],
+                    "b":  [SWDATag(comm_function=SWDAFunction.Acknowledge)],
+                    "sv": [SWDATag(comm_function=SWDAFunction.StatementOpinion)],
+                    "aa": [SWDATag(comm_function=SWDAFunction.AgreeAccept)],
+                    "%-": [SWDATag(comm_function=SWDAFunction.Abandoned)],
+                    "ba": [SWDATag(comm_function=SWDAFunction.Appreciation)],
+                    "qy": [SWDATag(comm_function=SWDAFunction.YesNoQuestion)],
+                    "x":  [SWDATag(comm_function=SWDAFunction.NonVerbal)],
+                    "ny": [SWDATag(comm_function=SWDAFunction.YesAnswers)],
+                    "fc": [SWDATag(comm_function=SWDAFunction.ConventionalClosing)],
+                    "%":  [SWDATag(comm_function=SWDAFunction.Uninterpretable)],
+                    "qw": [SWDATag(comm_function=SWDAFunction.WhQuestion)],
+                    "nn": [SWDATag(comm_function=SWDAFunction.NoAnswers)],
+                    "bk": [SWDATag(comm_function=SWDAFunction.ResponseAcknowledgement)],
+                    "h":  [SWDATag(comm_function=SWDAFunction.Hedge)],
+                    "qy^d": [SWDATag(comm_function=SWDAFunction.DeclarativeYNQuestion)],
+                    "o": [SWDATag(comm_function=SWDAFunction.Other)],
+                    "bh": [SWDATag(comm_function=SWDAFunction.BackchannelInQuestionForm)],
+                    "^q": [SWDATag(comm_function=SWDAFunction.Quotation)],
+                    "bf": [SWDATag(comm_function=SWDAFunction.SummarizeReformulate)],
+                    "na": [SWDATag(comm_function=SWDAFunction.AffirmativeNonYesAnswers)],
+                    "ny^e": [SWDATag(comm_function=SWDAFunction.AffirmativeNonYesAnswers)],
+                    "ad": [SWDATag(comm_function=SWDAFunction.ActionDirective)],
+                    "^2": [SWDATag(comm_function=SWDAFunction.CollaborativeCompletion)],
+                    "b^m": [SWDATag(comm_function=SWDAFunction.RepeatPhrase)],
+                    "qo": [SWDATag(comm_function=SWDAFunction.OpenQuestion)],
+                    "qh": [SWDATag(comm_function=SWDAFunction.RhetoricalQuestions)],
+                    "^h": [SWDATag(comm_function=SWDAFunction.Hold)],
+                    "ar": [SWDATag(comm_function=SWDAFunction.Reject)],
+                    "ng": [SWDATag(comm_function=SWDAFunction.NegativeNonNoAnswers)],
+                    "nn^e": [SWDATag(comm_function=SWDAFunction.NegativeNonNoAnswers)],
+                    "br": [SWDATag(comm_function=SWDAFunction.SignalNonUnderstanding)],
+                    "no": [SWDATag(comm_function=SWDAFunction.OtherAnswers)],
+                    "fp": [SWDATag(comm_function=SWDAFunction.ConventionalOpening)],
+                    "qrr": [SWDATag(comm_function=SWDAFunction.OrClause)],
+                    "arp": [SWDATag(comm_function=SWDAFunction.DispreferredAnswers)],
+                    "nd": [SWDATag(comm_function=SWDAFunction.DispreferredAnswers)],
+                    "t3": [SWDATag(comm_function=SWDAFunction.ThirdPartyTalk)],
+                    "oo": [SWDATag(comm_function=SWDAFunction.OffersOptionsCommits)],
+                    "co": [SWDATag(comm_function=SWDAFunction.OffersOptionsCommits)],
+                    "cc": [SWDATag(comm_function=SWDAFunction.OffersOptionsCommits)],
+                    "t1": [SWDATag(comm_function=SWDAFunction.SelfTalk)],
+                    "bd": [SWDATag(comm_function=SWDAFunction.Downplayer)],
+                    "aap": [SWDATag(comm_function=SWDAFunction.MaybeAcceptPart)],
+                    "am": [SWDATag(comm_function=SWDAFunction.MaybeAcceptPart)],
+                    "^g": [SWDATag(comm_function=SWDAFunction.TagQuestion)],
+                    "qw^d": [SWDATag(comm_function=SWDAFunction.DeclarativeWhQuestion)],
+                    "fa": [SWDATag(comm_function=SWDAFunction.Apology)],
+                    "ft": [SWDATag(comm_function=SWDAFunction.Thanking)],
+                }
+            elif taxonomy == Taxonomy.ISO:
+                mapping_dict = {
+                    "sd": [ISOTag(dimension=ISODimension.Task, comm_function=ISOTaskFunction.Statement)],
+                    "qrr": [ISOTag(dimension=ISODimension.Task, comm_function=ISOTaskFunction.ChoiceQ)],
+                    "qw^d": [ISOTag(dimension=ISODimension.Task, comm_function=ISOTaskFunction.SetQ)],
+                    "qw": [ISOTag(dimension=ISODimension.Task, comm_function=ISOTaskFunction.SetQ)],
+                    "bh": [ISOTag(dimension=ISODimension.Task, comm_function=ISOTaskFunction.PropQ)],
+                    "qy": [ISOTag(dimension=ISODimension.Task, comm_function=ISOTaskFunction.PropQ)],
+                    "qy^d": [ISOTag(dimension=ISODimension.Task, comm_function=ISOTaskFunction.PropQ)],
+                    "^g": [ISOTag(dimension=ISODimension.Task, comm_function=ISOTaskFunction.PropQ)],
+                    "oo": [ISOTag(dimension=ISODimension.Task, comm_function=ISOTaskFunction.Commissive)],
+                    "co": [ISOTag(dimension=ISODimension.Task, comm_function=ISOTaskFunction.Commissive)],
+                    "cc": [ISOTag(dimension=ISODimension.Task, comm_function=ISOTaskFunction.Commissive)],
+                    "ad": [ISOTag(dimension=ISODimension.Task, comm_function=ISOTaskFunction.Directive)],
+                    "ft": [ISOTag(dimension=ISODimension.SocialObligation, comm_function=ISOSocialFunction.Thanking)],
+                    "fa": [ISOTag(dimension=ISODimension.SocialObligation, comm_function=ISOSocialFunction.Apology)],
+                    "bd": [ISOTag(dimension=ISODimension.SocialObligation, comm_function=ISOSocialFunction.Apology)],
+                    "fc": [ISOTag(dimension=ISODimension.SocialObligation, comm_function=ISOSocialFunction.Salutation)],
+                    "br": [ISOTag(dimension=ISODimension.Feedback, comm_function=ISOFeedbackFunction.Feedback)],
+                    "b": [ISOTag(dimension=ISODimension.Feedback, comm_function=ISOFeedbackFunction.Feedback)],
+                    "ba": [ISOTag(dimension=ISODimension.Feedback, comm_function=ISOFeedbackFunction.Feedback)],
+                    "%":  [ISOTag(dimension=ISODimension.Task, comm_function=ISOTaskFunction.Unknown)]
+                }
+            else:
+                raise NotImplementedError(f"Taxonomy {taxonomy} unsupported")
+            new_tag = mapping_dict.get(dialogue_act, "%")  # mapping to literature map
+            if new_tag == "%":  # mapping without rhetorical tags (see WS97 mapping guidelines for more details)
+                new_tag = mapping_dict.get(
+                    dialogue_act.split(",")[0].split(";")[0].split("^")[0].split("(")[0].replace("*", "").replace("@",
+                                                                                                                  ""),
+                    mapping_dict["%"])
+        return new_tag

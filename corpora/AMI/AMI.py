@@ -122,12 +122,13 @@ class AMI(Corpus):
                 parsed_da = self.da_to_taxonomy(DA, self.taxonomy)
                 previous_da = previous_utterance.tags[0] if len(previous_utterance.tags) > 0 else None
                 if (parsed_da != previous_da or current_segment != segment) and sentence != "":  # new DA or segment
-                    parsed_corpus.append(
-                        Utterance(text=sentence.strip().replace("&#39;", "'"),
-                                  tags=self.da_to_taxonomy(DA, self.taxonomy),
-                                  context=[previous_utterance],
-                                  speaker_id=speaker_id)
-                    )
+                    if self.da_to_taxonomy(DA, self.taxonomy)[0].comm_function.value > -1:  # not unknown DA
+                        parsed_corpus.append(
+                            Utterance(text=sentence.strip().replace("&#39;", "'"),
+                                      tags=self.da_to_taxonomy(DA, self.taxonomy),
+                                      context=[previous_utterance],
+                                      speaker_id=speaker_id)
+                        )
                     previous_utterance = Utterance(text=sentence.strip().replace("&#39;", "'"),
                                                    tags=self.da_to_taxonomy(DA, self.taxonomy),
                                                    context=[previous_utterance],
@@ -150,7 +151,7 @@ class AMI(Corpus):
             elif dialogue_act in ["ami_da_1", "ami_da_9"]:
                 return [ISOTag(dimension=ISODimension.Task, comm_function=ISOFeedbackFunction.Feedback)]
             else:
-                return None
+                return [ISOTag(dimension=ISODimension.Unknown, comm_function=ISOTaskFunction.Unknown)]
         elif taxonomy == Taxonomy.AMI:
             if dialogue_act == "ami_da_1":
                 return [AMITag(comm_function=AMIFunction.Backchannel)]
@@ -183,4 +184,7 @@ class AMI(Corpus):
             elif dialogue_act == "ami_da_16":
                 return [AMITag(comm_function=AMIFunction.Other)]
             else:
-                return None
+                return [AMITag(comm_function=AMIFunction.Unknown)]
+        else:
+            raise NotImplementedError(f"Taxonomy {taxonomy} unsupported")
+
