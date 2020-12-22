@@ -3,7 +3,7 @@ import pickle
 from .dialogue_act_tagger import DialogueActTagger
 from corpora.taxonomy import Taxonomy, Tag, ISOTag, ISODimension, ISOFeedbackFunction, \
     ISOTaskFunction, ISOSocialFunction, AMITag, AMIFunction
-from corpora.Corpus import Utterance
+from corpora.corpus import Utterance
 from typing import List
 from config import SVMConfig
 from sklearn.feature_extraction.text import CountVectorizer

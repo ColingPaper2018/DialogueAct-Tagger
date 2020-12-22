@@ -1,6 +1,6 @@
 import os
 from collections import OrderedDict
-from corpora.Corpus import Corpus, Utterance
+from corpora.corpus import Corpus, Utterance
 from corpora.taxonomy import Taxonomy, ISOTag, ISODimension, ISOTaskFunction, ISOFeedbackFunction, MaptaskFunction, \
     MaptaskTag
 import logging

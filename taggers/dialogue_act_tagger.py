@@ -1,4 +1,4 @@
-from corpora.Corpus import Utterance, Tag
+from corpora.corpus import Utterance, Tag
 from config import Config
 from typing import List
 

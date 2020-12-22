@@ -1,4 +1,4 @@
-from corpora.Corpus import Corpus
+from corpora.corpus import Corpus
 from taggers.dialogue_act_tagger import DialogueActTagger
 from config import Config
 import logging

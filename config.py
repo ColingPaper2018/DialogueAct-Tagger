@@ -16,8 +16,9 @@ class Model(Enum):
 
 class Config:
     def __init__(self, model_type: Model, taxonomy: Taxonomy, corpora_list: List[Tuple[type, str]]):
+        current_timestamp = time.time()
         self.model_type = model_type
-        self.out_folder = f"models/{time.time()}"
+        self.out_folder = f"models/{current_timestamp}/"
         self.acceptance_threshold = 0.5
         self.taxonomy = taxonomy
         self.corpora_list = corpora_list

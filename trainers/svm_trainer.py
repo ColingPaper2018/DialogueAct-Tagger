@@ -3,7 +3,7 @@ import pickle
 from sklearn.pipeline import Pipeline, FeatureUnion
 from taggers.svm_tagger import SVMTagger
 from config import SVMConfig
-from corpora.Corpus import Utterance
+from corpora.corpus import Utterance
 from typing import List
 import json
 
@@ -55,6 +55,7 @@ class SVMTrainer(Trainer):
     def dump_model(self, pipelines: dict):
         # Create directory
         path = Path(os.path.dirname(self.config.out_folder))
+        print(f"creating {self.config.out_folder}")
         path.mkdir(parents=True, exist_ok=True)
 
         # Save the config file

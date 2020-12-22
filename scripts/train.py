@@ -7,9 +7,9 @@ from corpora.taxonomy import Taxonomy
 import argparse
 import datetime
 import time
-from corpora.Maptask.Maptask import Maptask
-from corpora.AMI.AMI import AMI
-from corpora.Switchboard.Switchboard import Switchboard
+from corpora.maptask import Maptask
+from corpora.ami import AMI
+from corpora.switchboard import Switchboard
 from pathlib import Path
 
 if __name__ == "__main__":

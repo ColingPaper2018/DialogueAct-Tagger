@@ -1,10 +1,10 @@
 import os
 import re
-from corpora.Corpus import Corpus
+from corpora.corpus import Corpus
 import logging
 from corpora.taxonomy import Taxonomy, ISOTag, ISODimension, ISOTaskFunction, ISOFeedbackFunction, ISOSocialFunction, SWDAFunction, SWDATag, Tag
 from typing import List
-from corpora.Corpus import Utterance
+from corpora.corpus import Utterance
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("ISO_DA")
 
