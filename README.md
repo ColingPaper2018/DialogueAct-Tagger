@@ -12,45 +12,46 @@ This repository contains a set of utilities which can be used to train and test 
 This software only uses publicly available datasets to train the models. However, some of these resources may require authorizations before they are used. Please check that you have all the available data before using this code. You can find information on how to obtain the required corpora on their official websites:
 
 1. For the Switchboard Dialogue Act Corpus: https://web.stanford.edu/~jurafsky/swb1_dialogact_annot.tar.gz
-2. For Oasis BT: http://groups.inf.ed.ac.uk/oasis/ (please note that Oasis BT's license has expired and thus to our knowledge the corpus is no longer available)
 3. For Maptask http://groups.inf.ed.ac.uk/maptask/
-4. For VerbMobil2: https://www.phonetik.uni-muenchen.de/Bas/BasVM2eng.html
 5. For AMI: http://groups.inf.ed.ac.uk/ami/corpus/
 
+_Note: the Oasis BT corpus and the Verbmobil 2 corpus were originally included in the list of supported datasets and are mentioned in our research paper.
+However, due to the difficulty of obtaining these corpora and their marginal contribution to the tagger's performances, we
+ have decided to stop supporting them in our codebase_.
+
+
 Each corpus folder has a `data` subfolder which must contain the appropriate resource's unzipped parent folder.
-The file `DialogueActTrain.py` contains a small main method which can be used to train a Dialogue Act Tagger. 
+The file `scripts/train.py` contains some basic code which can be used to train a Dialogue Act Tagger.
 If you do not have access to some of the resources you can easily comment the corresponding line to avoid using that resource when training. 
-Your DA tagger will then be stored in the `models` folder. You can then use the `DialogActTagger` class in the self-named Python file to test it and use it.
-The code was written using Python3 and requires spaCy 1.8 and the latest version of Scikit-learn to run.
+Your DA tagger will then be stored in the `models` folder. You can then use one of the `DialogActTagger` class implementations which are located in the `taggers` folder to test a trained model.
+The code was written using Python 3.6 and requires spaCy 2 and the latest version of Scikit-learn to run.
 
-# The Corpus class and the corpora mappers
+# Overview of the core classes
 
-The main component of the code architecture is the `Corpus` interface and their extensions, which handle conversion of the corporas' original scheme to the ISO standard. The interface is built around four main steps:
+The code handles the import and parsing of the raw corpora, and converts them into high-level classes using either their original taxonomy or the ISO standard taxonomy.
 
-* Loading (usually handled in the constructor)
-* Converting to CSV (`load_csv` method). This is necessary since some of these resources were annotated in a quite unconvenient XML format which makes it hard to read for a human annotator.
-* Mapping to ISO standard (`create_csv` method)
-* Dumping (a separate method was implemented for each ISO dimension, plus one to just output the original corpus annotation in CSV).
+### Taxonomy and Tags
 
-The csv is comma-separated and has a very simple structure. Each row is a tuple in the form
+Every supported taxonomy in the codebase is listed in the `Taxonomy` enumeration. A taxonomy has a corresponding tag type (which corresponds to its value in the `Enum`) which implements the `Tag` interface.
+Tag is a union of dataclasses whose attributes describe the annotation structure of the corresponding taxonomy. All tags are usually described by a `comm_function`, with some of them (such as the ISO standard) also having a semantic category called a `dimension`
 
-`(sentence, DA tag, previous DA tag,  segment, additional info, previous additional info)`
+### Utterance and Corpus
 
-where
+The `Utterance` and `Corpus` classes provide abstraction of the raw corpora into high-level classes.
+An `Utterance` represents a single datapoint within a dataset. It includes the utterances' `text`, one or more `tags` associated to it, the `speaker_id` for the utterance and a `context` representing contextual information through the history of previous utterances.
+A `Corpus` class takes a raw conversational dataset and converts it into a list of `Utterances`, which can then be used to train a dialogue act tagger.
+Any implementation of the `Corpus` interface must implement the following methods:
 
-* sentence is the annotated utterance
-* DA tag is the corresponding DA tag
-* previous DA tag is the DA tag of the previous sentence
-* segment is an index which encodes the logical segment to which the utterance belongs (many of these corpora contain multi-utterance DA annotations).
-* additional info contains a JSON with additional information required to map this corpus (for example, for Oasis it contains an additional label used to encode DAs)
-* previous additional info contains the additional info for the previous sentence
+* `validate_corpus`, which ensures all the necessary files are present in the folder.
+* `load_corpus`, which loads the raw data from the corpus in a `list` or `dict` object with as little processing as possible.
+* `parse_corpus` which converts the raw corpus into a list of `Utterance` objects
+* `da_to_taxonomy`, which provides a mapping from the raw corpus tags to a `Tag` of a certain `Taxonomy`.
 
-The Corpus interface can be followed to implement mapping to additional dialogue corpora, which then will be usable in the `DialogueActTrain` class, which handles training of the statistical model.
+The Corpus interface can be followed to implement mapping to additional dialogue corpora, which then will be usable in a `Trainer` class, which handles training of the statistical model.
 
 # Training a model
 
-Training a model is very easy, and is handled by the `DialogueActTrain` class. The class has a `train_all` method which trains a complete model for ISO DA annotation and dumps it in the `output_folder` folder. Features for the single models can be enabled/disabled at will, and new features are easy to add since the code uses extendible Scikit Learn Pipelines. 
-Training is done using Support Vector Machine (LinearSVC) for each classifier of the pipeline. Dumping is done by using the `pickle` library, which is included in every version of Python > 2.6
+Training a model is very easy, and is handled by the `Trainer` interface. This is a purposely generic interface, which only provides a generic `train` method in order to allow for flexible training approaches using different machine learning methods and libraries. An SVM Trainer is provided, based on Scikit-learn `Pipelines`.
 
 # Using the DA tagger
 
