@@ -1,24 +1,30 @@
+from corpora.corpus import Corpus
+from taggers.dialogue_act_tagger import DialogueActTagger
+from config import Config
+import logging
+from corpora.taxonomy import Taxonomy
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("ISO_DA")
+
+
 class Trainer:
-    def train_dimension(self, out_file):
+    def __init__(self, config: Config, taxonomy: Taxonomy):
+        self.config = config
+        self.taxonomy = taxonomy
+        self.corpora = []
+        if len(config.corpora_list) == 0:
+            logger.error("There are no corpora loaded, and the classifier won't train. "
+                         "Please check README.md for information on how to obtain more data")
+            exit(1)
+        for corpus in config.corpora_list:
+            try:
+                assert (issubclass(corpus[0], Corpus))
+            except AssertionError:
+                logger.error("DialogueActTrain error - The corpora list contains objects which are not corpora")
+                logger.error("Please ensure each of your corpora is a subclass of Corpus")
+                exit(1)
+
+    def train(self, out_file: str) -> DialogueActTagger:
         raise NotImplementedError()
 
-    def train_task(self, out_file):
-        raise NotImplementedError()
-
-    def train_som(self, out_file):
-        raise NotImplementedError()
-
-    def train_all(self, out_file):
-        raise NotImplementedError()
-
-    def train(self, layer, out_file):
-        if layer == 'all':
-            self.train_all(out_file)
-        elif layer == 'task':
-            self.train_task(out_file)
-        elif layer == 'som':
-            self.train_som(out_file)
-        elif layer == 'dim':
-            self.train_dimension(out_file)
-        else:
-            raise NotImplementedError(f"Unknown taxonomy layer: {layer}")

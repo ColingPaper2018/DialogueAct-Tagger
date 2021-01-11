@@ -4,7 +4,7 @@ sys.path.insert(1, os.path.join(sys.path[0], '..'))
 
 from config import Config, Model
 import argparse
-from predictors.svm_predictor import SVMPredictor
+from taggers.svm_tagger import SVMPredictor
 import logging
 
 
