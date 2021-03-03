@@ -1,0 +1,8 @@
+nltk
+scikit-learn
+spacy
+torch
+torchtext
+transformers
+seaborn
+pandas

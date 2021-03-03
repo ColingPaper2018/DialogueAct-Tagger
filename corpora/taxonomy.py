@@ -11,41 +11,41 @@ class ISODimension(Enum):
     SocialObligation
     Feedback
     """
-    Unknown = -1
-    Task = 0
-    SocialObligation = 1
-    Feedback = 2
+    Unknown = 0
+    Task = 1
+    SocialObligation = 2
+    Feedback = 3
 
 
 class ISOSocialFunction(Enum):
     """
     Tags for the Social Obligation dimension
     """
-    Unknown = -1
-    Thanking = 0
-    Salutation = 1
-    Apology = 2
+    Unknown = 0
+    Thanking = 1
+    Salutation = 2
+    Apology = 3
 
 
 class ISOTaskFunction(Enum):
     """
     Tags for the Task Dimension
     """
-    Unknown = -1
-    Statement = 0
-    PropQ = 1
-    SetQ = 2
-    ChoiceQ = 3
-    Directive = 4
-    Commissive = 5
+    Unknown = 0
+    Statement = 1
+    PropQ = 2
+    SetQ = 3
+    ChoiceQ = 4
+    Directive = 5
+    Commissive = 6
 
 
 class ISOFeedbackFunction(Enum):
     """
     Tags for the Feedback dimension
     """
-    Unknown = -1
-    Feedback = 0
+    Unknown = 0
+    Feedback = 1
 
 
 @dataclass
@@ -56,8 +56,7 @@ class ISOTag:
 
 # AMI Corpus
 class AMIFunction(Enum):
-    Unknown = -1
-    Backchannel = 0
+    Unknown = 0
     Stall = 1
     Fragment = 2
     Inform = 3
@@ -72,6 +71,7 @@ class AMIFunction(Enum):
     BePositive = 12
     BeNegative = 13
     Other = 14
+    Backchannel = 15
 
 
 @dataclass
@@ -81,8 +81,7 @@ class AMITag:
 
 # Maptask Corpus
 class MaptaskFunction(Enum):
-    Unknown = -1
-    Instruct = 0
+    Unknown = 0
     Explain = 1
     Check = 2
     Align = 3
@@ -93,6 +92,7 @@ class MaptaskFunction(Enum):
     ReplyN = 8
     ReplyW = 9
     Clarify = 10
+    Instruct = 11
 
 
 @dataclass
@@ -102,8 +102,7 @@ class MaptaskTag:
 
 # SWDA Corpus
 class SWDAFunction(Enum):
-    Uninterpretable = -1
-    StatementNonOpinion = 0
+    Uninterpretable = 0
     Acknowledge = 1
     StatementOpinion = 2
     AgreeAccept = 3
@@ -145,6 +144,7 @@ class SWDAFunction(Enum):
     TagQuestion = 39
     DeclarativeWhQuestion = 40
     Apology = 41
+    StatementNonOpinion = 42
 
 
 @dataclass

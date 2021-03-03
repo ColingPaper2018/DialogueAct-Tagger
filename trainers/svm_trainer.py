@@ -6,6 +6,7 @@ from config import SVMConfig
 from corpora.corpus import Utterance
 from typing import List
 import json
+from utils import stringify_tags
 
 from .trainer import Trainer
 from pathlib import Path
@@ -78,7 +79,7 @@ class SVMTrainer(Trainer):
         if "dimension" in self.config.taxonomy.value.__annotations__.keys():
             # Train dimension tagger
             logger.info("Training dimension pipeline")
-            dimension_dataset = SVMTagger.stringify_tags(dataset, "dimension")
+            dimension_dataset = stringify_tags(dataset, "dimension")
             pipelines['dimension'] = self.train_pipeline(self.config, dimension_dataset)
 
             # Train a comm-function classifier for each dimension
@@ -89,15 +90,14 @@ class SVMTrainer(Trainer):
             dimension_values = list(set([label for tagset in dimension_labels for label in tagset]))
             for dimension_value in dimension_values:
                 logger.info(f"Training communication function pipeline for dimension {dimension_value}")
-                comm_dataset = SVMTagger.stringify_tags(dataset, "comm_function",
-                                                        filter_attr="dimension", filter_value=dimension_value)
+                comm_dataset = stringify_tags(dataset, "comm_function",
+                                              filter_attr="dimension", filter_value=dimension_value)
                 pipelines[f'comm_{dimension_value}'] = self.train_pipeline(self.config, comm_dataset)
         else:
             logger.info("Training unified communication function pipeline")
-            comm_dataset = SVMTagger.stringify_tags(dataset, "comm_function")
+            comm_dataset = stringify_tags(dataset, "comm_function")
             pipelines['comm_all'] = self.train_pipeline(self.config, comm_dataset)
         self.config.pipeline_files = list(pipelines.keys())
         if dump:
             self.dump_model(pipelines)
         return SVMTagger(self.config)
-

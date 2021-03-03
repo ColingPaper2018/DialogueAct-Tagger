@@ -2,9 +2,7 @@
 
 #1) Install python dependencies
 
-pip install nltk
-pip install scikit-learn
-pip install spacy
+pip install -r requirements.txt
 python -m spacy download en
 
 #2) Download publicly available corpora
