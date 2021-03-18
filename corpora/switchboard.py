@@ -18,6 +18,7 @@ to dump the corpus in CSV format with original annotation and with ISO annotatio
 class Switchboard(Corpus):
     def __init__(self, switchboard_folder, taxonomy: Taxonomy):
         Corpus.__init__(self, "Switchboard", switchboard_folder, taxonomy)
+        self.test_files = ["sw11", "sw12", "sw13"]
         corpus = self.load_corpus(switchboard_folder)
         self.utterances = self.parse_corpus(corpus)
 
@@ -35,50 +36,56 @@ class Switchboard(Corpus):
                          "for info on how to obtain the complete SWDA corpus.")
             return
         # Read dialogue files from Switchboard
-        filelist = []
+        filelist = {"train": [], "test": []}
         for file_folder in os.listdir(folder):
             if file_folder.startswith("sw"):  # dialog folder
+                if any(f in file_folder for f in self.test_files):
+                    destination = "test"
+                else:
+                    destination = "train"
                 for filename in os.listdir(folder + "/" + file_folder):
                     if filename.startswith("sw"):  # dialog file
-                        filelist.append(folder + "/" + file_folder + "/" + filename)
-        conversations = {}
-        for filename in filelist:
-            with open(filename) as f:
-                utterances = f.readlines()
-            conversations[filename] = utterances
+                        filelist[destination].append(folder + "/" + file_folder + "/" + filename)
+        conversations = {"train": {}, "test": {}}
+        for destination in ["train", "test"]:
+            for filename in filelist[destination]:
+                with open(filename) as f:
+                    utterances = f.readlines()
+                conversations[destination][filename] = utterances
         return conversations
 
     def parse_corpus(self, conversations):
-        utterances = []
-        for filename in conversations.keys():
-            prev_speaker = None
-            segment = 0
-            prev_tags = {0: self.da_to_taxonomy("%", self.taxonomy, []), 1: self.da_to_taxonomy("%", self.taxonomy, [])}
-            prev_texts = {0: "", 1: ""}
-            for line in conversations[filename]:
-                line = line.strip()
-                try:
-                    sentence = line.split("utt")[1].split(":")[1]
-                    sw_tag = line.split("utt")[0].split()[0]
-                    if "A" in line.split("utt")[0]:  # A speaking
-                        speaker = 0
-                    else:
-                        speaker = 1
-                except IndexError:  # not an SWDA utterance format: probably a header line
-                    continue
-                if speaker != prev_speaker:
-                    prev_speaker = speaker
-                    segment += 1
-                sentence = re.sub(r"([+/\}\[\]]|\{\w)", "",
-                                  sentence)  # this REGEX removes prosodic information and disfluencies
-                sentence = re.sub(r'\W+', ' ', sentence)  # this REGEX removes non alphanumeric characters
-                sentence = ' '.join(sentence.split())  # this is just to make extra spaces collapse
-                tags = self.da_to_taxonomy(sw_tag, self.taxonomy, prev_tags[speaker])
-                utterances.append(Utterance(text=sentence, tags=tags,
-                                            context=[Utterance(prev_texts[speaker], prev_tags[speaker], [], speaker)],
-                                            speaker_id=speaker))
-                prev_tags[speaker] = tags
-                prev_texts[speaker] = sentence
+        utterances = {"train": [], "test": []}
+        for destination in ["train", "test"]:
+            for filename in conversations[destination].keys():
+                prev_speaker = None
+                segment = 0
+                prev_tags = {0: self.da_to_taxonomy("%", self.taxonomy, []), 1: self.da_to_taxonomy("%", self.taxonomy, [])}
+                prev_texts = {0: "", 1: ""}
+                for line in conversations[destination][filename]:
+                    line = line.strip()
+                    try:
+                        sentence = line.split("utt")[1].split(":")[1]
+                        sw_tag = line.split("utt")[0].split()[0]
+                        if "A" in line.split("utt")[0]:  # A speaking
+                            speaker = 0
+                        else:
+                            speaker = 1
+                    except IndexError:  # not an SWDA utterance format: probably a header line
+                        continue
+                    if speaker != prev_speaker:
+                        prev_speaker = speaker
+                        segment += 1
+                    sentence = re.sub(r"([+/\}\[\]]|\{\w)", "",
+                                      sentence)  # this REGEX removes prosodic information and disfluencies
+                    sentence = re.sub(r'\W+', ' ', sentence)  # this REGEX removes non alphanumeric characters
+                    sentence = ' '.join(sentence.split())  # this is just to make extra spaces collapse
+                    tags = self.da_to_taxonomy(sw_tag, self.taxonomy, prev_tags[speaker])
+                    utterances[destination].append(Utterance(text=sentence, tags=tags,
+                                                             context=[Utterance(prev_texts[speaker], prev_tags[speaker], [], speaker)],
+                                                             speaker_id=speaker))
+                    prev_tags[speaker] = tags
+                    prev_texts[speaker] = sentence
         return utterances
 
     @staticmethod

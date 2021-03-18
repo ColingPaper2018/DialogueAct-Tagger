@@ -1,8 +1,7 @@
 import os
 import pickle
 from .dialogue_act_tagger import DialogueActTagger, Classifier
-from corpora.taxonomy import Taxonomy, Tag, ISOTag, ISODimension, ISOFeedbackFunction, \
-    ISOTaskFunction, ISOSocialFunction, AMITag, AMIFunction
+from corpora.taxonomy import Tag
 from corpora.corpus import Utterance
 from typing import List
 from config import SVMConfig
@@ -14,10 +13,22 @@ from typing import Optional, Union
 import json
 import logging
 from utils import ItemSelector
-
+import numpy as np
+from corpora.taxonomy import ISOTag
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("ISO_DA")
+
+
+class DummyClassifier:
+    def __init__(self, n_classes):
+        self.n_classes = n_classes
+
+    def predict(self, X):
+        return [0] * len(X)
+
+    def predict_proba(self, X):
+        return [0.0] * len(X)
 
 
 class SVMTagger(DialogueActTagger):
@@ -30,11 +41,16 @@ class SVMTagger(DialogueActTagger):
     def __init__(self, cfg: SVMConfig):
         DialogueActTagger.__init__(self, cfg)
         self.history: List[Utterance] = []
-        for pipeline, tagset in self.config.pipeline_files:
+        for pipeline in self.config.pipeline_files:
             try:
                 pipeline_file = open(os.path.join(cfg.out_folder, pipeline), "rb")
-                self.classifiers[pipeline] = Classifier(model=pickle.load(pipeline_file), target_tagset=tagset)
-
+                if "dimension" in pipeline:
+                    target_tagset = cfg.taxonomy.value.get_dimension_taxonomy()
+                elif pipeline == "comm_all":
+                    target_tagset = cfg.taxonomy.value.get_comm_taxonomy_given_dimension()
+                else:
+                    target_tagset = cfg.taxonomy.value.get_comm_taxonomy_given_dimension(int(pipeline.split("comm_")[1]))
+                self.classifiers[pipeline] = Classifier(model=pickle.load(pipeline_file), target_tagset=target_tagset)
             except OSError:
                 logging.error("The model folder does not contain the required models to run the DA tagger")
                 logging.error("Please run the train_all() method of the "
@@ -57,7 +73,7 @@ class SVMTagger(DialogueActTagger):
                 if config.indexed_dep:
                     features["labels"]["pos_" + tok.dep_] = True
             if config.prev:
-                features["prev_" + utt.context[0] if len(utt.context) > 0 else "Other"] = True
+                features["prev_" + str(utt.context[0]) if len(utt.context) > 0 else "Other"] = True
             dimension_features.append(features)
         wordcount_pipeline = Pipeline([
             ('selector', ItemSelector(key='word_count')),
@@ -75,25 +91,19 @@ class SVMTagger(DialogueActTagger):
         tags = []
         if 'dimension' in self.classifiers:
             features = SVMTagger.build_features([sentence], self.config)[0]
-            task_dim = self.classifiers['dimension'].model.predict_proba(features)[0][0]
-            som_dim = self.classifiers['dimension'].model.predict_proba(features)[0][1]
-            fb_dim = self.classifiers['dimension'].model.predict_proba(features)[0][2]
-            if task_dim > self.config.acceptance_threshold:
-                tags.append(
-                    ISOTag(dimension=ISODimension.Task,
-                           comm_function=ISOTaskFunction(self.models['comm_task'].predict(features)[0]))
-                )
-            if som_dim > self.config.acceptance_threshold:
-                tags.append(
-                    ISOTag(dimension=ISODimension.SocialObligation,
-                           comm_function=ISOSocialFunction(self.models['comm_som'].predict(features)[0]))
-                )
-            if fb_dim > self.config.acceptance_threshold:
-                tags.append(
-                    ISOTag(dimension=ISODimension.Feedback,
-                           comm_function=ISOFeedbackFunction(self.models['comm_fb'].predict(features)[0]))
-                )
+            prediction = self.classifiers['dimension'].model.predict_proba(features)[0]
+            for dimension in range(0, len(prediction)):
+                feature_dim = prediction[dimension]
+                if feature_dim > self.config.acceptance_threshold:
+                    tags.append(
+                        self.config.taxonomy.value(
+                            dimension=self.classifiers["dimension"].target_tagset(dimension + 1),
+                            comm_function=self.classifiers[f'comm_{dimension + 1}'].target_tagset(
+                                self.classifiers[f'comm_{dimension + 1}'].model.predict(features)[0]))
+                    )
         else:
             features = SVMTagger.build_features([sentence], self.config)[0]
-            tags.append(self.classifiers['comm_all'].target_tagset(comm_function=AMIFunction(self.models['comm_all'].predict(features)[0])))
+            tags.append(self.classifiers['comm_all'].target_tagset(
+                comm_function=self.classifiers['comm_all'].target_tagset(
+                    self.classifiers['comm_all'].model.predict(features)[0])))
         return tags

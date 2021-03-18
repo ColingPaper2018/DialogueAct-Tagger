@@ -11,8 +11,7 @@ import torch
 from torchtext.data import BucketIterator
 import logging
 import random
-from typing import Optional
-
+from typing import Tuple
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger("ISO_DA")
@@ -22,9 +21,9 @@ class TransformerTrainer(Trainer):
     """
     Dialogue Act Trainer using the Hugging Face transformer architecture
     """
-    def __init__(self, config: TransformerConfig):
-        Trainer.__init__(self, config, config.taxonomy)
-        for c in config.corpora_list:
+    def __init__(self, config: TransformerConfig, corpora_list: List[Tuple[type, str]]):
+        Trainer.__init__(self, config, config.taxonomy, corpora_list)
+        for c in corpora_list:
             try:
                 self.corpora.append(c[0](c[1], config.taxonomy))
             except Exception as e:
@@ -45,25 +44,6 @@ class TransformerTrainer(Trainer):
 
         torch.save(state_dict, f"{self.config.out_folder}/{model_name}.pt")
         logger.info(f'Model saved to ==> {self.config.out_folder}')
-
-    #
-    # def save_metrics(self, train_loss_list, valid_loss_list, global_steps_list):
-    #     state_dict = {'train_loss_list': train_loss_list,
-    #                   'valid_loss_list': valid_loss_list,
-    #                   'global_steps_list': global_steps_list}
-    #
-    #     torch.save(state_dict, self.config.metrics_path)
-    #     logger.info(f'Model saved to ==> {self.config.metrics_path}')
-    #
-    # @staticmethod
-    # def load_metrics(load_path, device):
-    #     if load_path is None:
-    #         return
-    #
-    #     state_dict = torch.load(load_path, map_location=device)
-    #     logger.info(f'Model loaded from <== {load_path}')
-    #
-    #     return state_dict['train_loss_list'], state_dict['valid_loss_list'], state_dict['global_steps_list']
 
     def train_transformer(self, train_set: List[Utterance], valid_set: List[Utterance], n_classes: int,
                           model_name: str) -> BERT:
@@ -115,60 +95,57 @@ class TransformerTrainer(Trainer):
 
         # training loop
         model.train()
-        # for epoch in range(self.config.n_epochs):
-        #     for (text, label), _ in train_iter:
-        #         labels = label.type(torch.LongTensor)
-        #         labels = labels.to(self.config.device)
-        #         output = model(text, labels)
-        #         loss, _ = output
-        #         optimizer.zero_grad()
-        #         loss.backward()
-        #         optimizer.step()
-        #
-        #         # update running values
-        #         running_loss += loss.item()
-        #         global_step += 1
-        #
-        #         # evaluation step
-        #         if global_step % eval_every == 0:
-        #             model.eval()
-        #             with torch.no_grad():
-        #
-        #                 # validation loop
-        #                 for (vtext, vlabels), _ in valid_iter:
-        #                     vlabels = vlabels.type(torch.LongTensor)
-        #                     vlabels = vlabels.to(self.config.device)
-        #                     vtext = vtext.type(torch.LongTensor)
-        #                     vtext = vtext.to(self.config.device)
-        #                     output = model(vtext, vlabels)
-        #                     loss, _ = output
-        #
-        #                     valid_running_loss += loss.item()
-        #
-        #             # evaluation
-        #             average_train_loss = running_loss / eval_every
-        #             average_valid_loss = valid_running_loss / len(valid_iter)
-        #             train_loss_list.append(average_train_loss)
-        #             valid_loss_list.append(average_valid_loss)
-        #             global_steps_list.append(global_step)
-        #
-        #             # resetting running values
-        #             running_loss = 0.0
-        #             valid_running_loss = 0.0
-        #             model.train()
-        #
-        #             # print progress
-        #             logger.info(f'Epoch [{epoch + 1}/{self.config.n_epochs}], '
-        #                         f'Step [{global_step}/{self.config.n_epochs * len(train_iter)}], '
-        #                         f'Train Loss: {average_train_loss}, Valid Loss: {average_valid_loss}')
-        #
-        #             # checkpoint
-        #             if best_valid_loss > average_valid_loss:
-        #                 best_valid_loss = average_valid_loss
-        #                 self.save_checkpoint(model, model_name, best_valid_loss)
-        #                 # self.save_metrics(train_loss_list, valid_loss_list, global_steps_list)
+        for epoch in range(self.config.n_epochs):
+            for (text, label), _ in train_iter:
+                labels = label.type(torch.LongTensor)
+                labels = labels.to(self.config.device)
+                output = model(text, labels)
+                loss, _ = output
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step()
 
-        # self.save_metrics(train_loss_list, valid_loss_list, global_steps_list)
+                # update running values
+                running_loss += loss.item()
+                global_step += 1
+
+                # evaluation step
+                if global_step % eval_every == 0:
+                    model.eval()
+                    with torch.no_grad():
+
+                        # validation loop
+                        for (vtext, vlabels), _ in valid_iter:
+                            vlabels = vlabels.type(torch.LongTensor)
+                            vlabels = vlabels.to(self.config.device)
+                            vtext = vtext.type(torch.LongTensor)
+                            vtext = vtext.to(self.config.device)
+                            output = model(vtext, vlabels)
+                            loss, _ = output
+
+                            valid_running_loss += loss.item()
+
+                    # evaluation
+                    average_train_loss = running_loss / eval_every
+                    average_valid_loss = valid_running_loss / len(valid_iter)
+                    train_loss_list.append(average_train_loss)
+                    valid_loss_list.append(average_valid_loss)
+                    global_steps_list.append(global_step)
+
+                    # resetting running values
+                    running_loss = 0.0
+                    valid_running_loss = 0.0
+                    model.train()
+
+                    # print progress
+                    logger.info(f'Epoch [{epoch + 1}/{self.config.n_epochs}], '
+                                f'Step [{global_step}/{self.config.n_epochs * len(train_iter)}], '
+                                f'Train Loss: {average_train_loss}, Valid Loss: {average_valid_loss}')
+
+                    # checkpoint
+                    if best_valid_loss > average_valid_loss:
+                        best_valid_loss = average_valid_loss
+                        self.save_checkpoint(model, model_name, best_valid_loss)
 
         self.save_checkpoint(model, model_name, 1.0)
         logger.info(f'Finished Training {model_name}!')

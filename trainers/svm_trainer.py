@@ -1,40 +1,44 @@
 import os
 import pickle
 from sklearn.pipeline import Pipeline, FeatureUnion
-from taggers.svm_tagger import SVMTagger
+from taggers.svm_tagger import SVMTagger, DummyClassifier
 from config import SVMConfig
 from corpora.corpus import Utterance
 from typing import List
 import json
 from utils import stringify_tags
+from typing import Tuple
 
 from .trainer import Trainer
 from pathlib import Path
 import logging
-
+import numpy as np
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("ISO_DA")
 
 
 class SVMTrainer(Trainer):
-    def __init__(self, config: SVMConfig):
-        Trainer.__init__(self, config, config.taxonomy)
-        for c in config.corpora_list:
-            try:
+    def __init__(self, config: SVMConfig, corpora_list: List[Tuple[type, str]]):
+        Trainer.__init__(self, config, config.taxonomy, corpora_list)
+        for c in corpora_list:
                 self.corpora.append(c[0](c[1], config.taxonomy))
-            except Exception as e:
-                logger.warning(f"Corpus {c[0]} not loaded. {e}")
 
     @staticmethod
-    def train_pipeline(config: SVMConfig, dataset: List[Utterance]):
+    def train_pipeline(config: SVMConfig, dataset: List[Utterance], n_classes: int = 1):
+        logger.info(f"Tagset for this classifier: {set([t for u in dataset for t in u.tags])}")
+
+        if len(dataset) == 0:
+            logger.warning(f"No data available for this classifier. A dummy classifier will be created."
+                           "Please provide additional data to obtain a working classifier. You can check README.md "
+                           "for information on how to obtain more data")
+            return DummyClassifier(n_classes=1)
         if all(len(u.tags) == 1 for u in dataset) and all(u.tags[0] == dataset[0].tags[0] for u in dataset):
             logger.warning(f"The only tag available for this classifier is {dataset[0].tags[0]}."
                            "The classifier will still be trained, but it won't recognise any other labels."
                            "Please provide additional data to obtain a working classifier. You can check README.md "
                            "for information on how to obtain more data")
-            for _ in range(0, 3):
-                dataset.append(Utterance(text="<<unk>>", context=[], tags=["<<unk>>"], speaker_id=0))
+            return DummyClassifier(n_classes=1)
         features = SVMTagger.build_features(dataset, config)
         train_pipeline = Pipeline([
             # Use FeatureUnion to combine the features from wordcount and labels
@@ -42,13 +46,13 @@ class SVMTrainer(Trainer):
                 transformer_list=[('feature_' + str(i), pipeline) for i, pipeline in enumerate(features[1])]
             )),
             # Use a SVC classifier on the combined features
-            ('classifier', config.classifier)
+            ('classifier', config.create_classifier())
         ])
         if len(dataset) == 0:
             logger.error(f"Not enough data to train the classifier! Please check README.md for "
                          f"more information on how to obtain more data")
             return
-        train_pipeline.fit(features[0], [u.tags for u in dataset])
+        train_pipeline.fit(features[0], np.ravel([u.tags for u in dataset]))
         for _ in range(1, 4):
             del(dataset[-1])
         return train_pipeline
@@ -56,7 +60,6 @@ class SVMTrainer(Trainer):
     def dump_model(self, pipelines: dict):
         # Create directory
         path = Path(os.path.dirname(self.config.out_folder))
-        print(f"creating {self.config.out_folder}")
         path.mkdir(parents=True, exist_ok=True)
 
         # Save the config file
@@ -75,13 +78,16 @@ class SVMTrainer(Trainer):
         pipelines = {}
 
         for corpus in self.corpora:
-                dataset = dataset + corpus.utterances
-        if "dimension" in self.config.taxonomy.value.__annotations__.keys():
+                dataset = dataset + corpus.get_train_split()
+        if self.config.taxonomy.value.get_dimension_taxonomy() is not None:
             # Train dimension tagger
             logger.info("Training dimension pipeline")
             dimension_dataset = stringify_tags(dataset, "dimension")
-            pipelines['dimension'] = self.train_pipeline(self.config, dimension_dataset)
 
+            # Filter out unknown tags
+            dimension_dataset = [u for u in dimension_dataset if all(t > 0 for t in u.tags)]
+
+            pipelines['dimension'] = self.train_pipeline(self.config, dimension_dataset)
             # Train a comm-function classifier for each dimension
             dimension_labels = [
                 [tag for tag in utt.tags]
@@ -92,6 +98,10 @@ class SVMTrainer(Trainer):
                 logger.info(f"Training communication function pipeline for dimension {dimension_value}")
                 comm_dataset = stringify_tags(dataset, "comm_function",
                                               filter_attr="dimension", filter_value=dimension_value)
+
+                # Filter out unknown tags
+                comm_dataset = [u for u in comm_dataset if all(t > 0 for t in u.tags)]
+
                 pipelines[f'comm_{dimension_value}'] = self.train_pipeline(self.config, comm_dataset)
         else:
             logger.info("Training unified communication function pipeline")

@@ -8,7 +8,6 @@ from dataclasses import dataclass
 class Classifier:
     model: Any
     target_tagset: dataclass
-    children: List["Classifier"]
 
 
 class DialogueActTagger:

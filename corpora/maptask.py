@@ -4,7 +4,7 @@ from corpora.corpus import Corpus, Utterance
 from corpora.taxonomy import Taxonomy, ISOTag, ISODimension, ISOTaskFunction, ISOFeedbackFunction, MaptaskFunction, \
     MaptaskTag
 import logging
-from typing import List
+from typing import List, Dict
 
 
 logging.basicConfig(level=logging.INFO)
@@ -18,6 +18,8 @@ to dump the corpus in CSV format with original annotation and with ISO annotatio
 class Maptask(Corpus):
     def __init__(self, maptask_folder, taxonomy: Taxonomy):
         Corpus.__init__(self, "Maptask", maptask_folder, taxonomy)
+        self.test_units = ["q1ec3", "q1ec6", "q1ec8", "q1nc4", "q2ec4", "q3ec4", "q4ec3", "q5ec1", "q5ec4",
+                           "q5nc5", "q5nc8", "q6ec3", "q6nc3", "q7ec2", "q7ec4", "q7nc7", "q8nc4", "q8nc5"]
         corpus = self.load_corpus(maptask_folder)
         self.utterances = self.parse_corpus(corpus)
 
@@ -36,8 +38,12 @@ class Maptask(Corpus):
             logger.info("You can download a complete version at http://groups.inf.ed.ac.uk/maptask/maptasknxt.html")
             return []
         time_unit_folder = f"{folder}/Data/timed-units/"
-        dialogs = OrderedDict()
+        dialogs = {"train": OrderedDict(), "test": OrderedDict()}
         for filename in os.listdir(time_unit_folder):
+            if any(t in filename for t in self.test_units):
+                destination = "test"
+            else:
+                destination = "train"
             f = open(time_unit_folder + filename)
             speaker = filename.split(".")[1]
             for line in f:
@@ -45,10 +51,14 @@ class Maptask(Corpus):
                     move_id = line.split("id=")[1].split("\"")[1].split("\"")[0]
                     utt_id = line.split("utt=")[1].split("\"")[1].split("\"")[0]
                     value = line.split(">")[1].split("<")[0]
-                    dialogs[move_id] = {"move": utt_id, "text": value, "speaker": speaker}
+                    dialogs[destination][move_id] = {"move": utt_id, "text": value, "speaker": speaker}
         move_folder = f"{folder}/Data/moves/"
         for filename in os.listdir(move_folder):
             f = open(f"{move_folder}/{filename}")
+            if any(t in filename for t in self.test_units):
+                destination = "test"
+            else:
+                destination = "train"
             for line in f:
                 if "label" not in line:  # not a label: skip line
                     continue
@@ -68,56 +78,60 @@ class Maptask(Corpus):
                 set_id = [text + "." + str(i) for i in range(start_n, stop_n + 1)]
                 for moveid in set_id:
                     try:
-                        dialogs[moveid]["da"] = label
+                        dialogs[destination][moveid]["da"] = label
                     except KeyError:  # move has no DA
                         pass
-        fixed_moves = []
+        fixed_moves = {"train": [], "test": []}
         current_move = 2
         current_sentence = ""
-        for m in dialogs:
-            try:
-                move = int(dialogs[m]["move"])
-                current_da = dialogs[m]["da"]
-            except ValueError:  # transcription error: is not an integer
-                continue
-            except KeyError:  # no DA for this move
-                continue
-            if move != current_move:  # add prev move to the fixed_moves array
-                fixed_moves.append((current_sentence.strip(), current_da, current_move))
-                current_sentence = ""
-            current_sentence += (" " + dialogs[m]["text"])
-            current_move = int(dialogs[m]["move"])
+        for destination in dialogs:
+            for m in dialogs[destination]:
+                try:
+                    move = int(dialogs[destination][m]["move"])
+                    current_da = dialogs[destination][m]["da"]
+                except ValueError:  # transcription error: is not an integer
+                    continue
+                except KeyError:  # no DA for this move
+                    continue
+                if move != current_move:  # add prev move to the fixed_moves array
+                    fixed_moves[destination].append((current_sentence.strip(), current_da, current_move))
+                    current_sentence = ""
+                current_sentence += (" " + dialogs[destination][m]["text"])
+                current_move = int(dialogs[destination][m]["move"])
 
-        conversations = []
-        current_move = 0
-        current_conv = {}
-        for sent, da, move in fixed_moves:
-            if move < current_move and move % 2 == 0:
-                conversations.append(current_conv)
-                current_conv = {}
-            current_move = move
-            current_conv[move] = (sent, da)
+        conversations = {"train": [], "test": []}
+        for destination in ["train", "test"]:
+            current_move = 0
+            current_conv = {}
+            for sent, da, move in fixed_moves[destination]:
+                if move < current_move and move % 2 == 0:
+                    conversations[destination].append(current_conv)
+                    current_conv = {}
+                current_move = move
+                current_conv[move] = (sent, da)
         return conversations
 
-    def parse_corpus(self, conversations) -> List[Utterance]:
-        csv_corpus = []
-        for c in conversations:
-            segment = 0
-            prev_tags = self.da_to_taxonomy("unk", self.taxonomy)
-            prev_sentence = ""
-            for k in sorted(c.keys()):
-                sentence, tag = c[k][0], c[k][1]
-                tags = self.da_to_taxonomy(tag, self.taxonomy)
-                if tags[0].comm_function != self.da_to_taxonomy("unk", self.taxonomy):
-                    csv_corpus.append(Utterance(text=sentence, tags=tags,
-                                                speaker_id=segment % 2,
-                                                context=[Utterance(text=prev_sentence,
-                                                                   tags=prev_tags,
-                                                                   speaker_id= 1 - (segment % 2), context=[])
-                                                         ]))
-                prev_tags = tags
-                prev_sentence = sentence
-                segment += 1
+    def parse_corpus(self, conversations) -> Dict[str, List[Utterance]]:
+        csv_corpus = {"train": [], "test": []}
+        for destination in ["train", "test"]:
+            for c in conversations[destination]:
+                segment = 0
+                prev_tags = self.da_to_taxonomy("unk", self.taxonomy)
+                prev_sentence = ""
+                for k in sorted(c.keys()):
+                    sentence, tag = c[k][0], c[k][1]
+                    tags = self.da_to_taxonomy(tag, self.taxonomy)
+                    if tags[0].comm_function != self.da_to_taxonomy("unk", self.taxonomy):
+                        csv_corpus[destination].append(Utterance(text=sentence, tags=tags,
+                                                                 speaker_id=segment % 2,
+                                                                 context=[Utterance(text=prev_sentence,
+                                                                                    tags=prev_tags,
+                                                                                    speaker_id=1 - (segment % 2),
+                                                                                    context=[])
+                                                                          ]))
+                    prev_tags = tags
+                    prev_sentence = sentence
+                    segment += 1
         return csv_corpus
 
     @staticmethod

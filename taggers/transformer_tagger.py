@@ -51,10 +51,10 @@ class TransformerTagger(DialogueActTagger):
         self.history: List[Utterance] = []
         for pipeline in self.config.pipeline_files:
             try:
-                model = BERT().to(cfg.device)
-                self.load_checkpoint(pipeline, model, cfg.device)
-
-                self.models[pipeline] = model
+                if "dimension" in pipeline:
+                    model = BERT(self.config.taxonomy).to(cfg.device)
+                    self.load_checkpoint(pipeline, model, cfg.device)
+                    self.models[pipeline] = model
             except OSError:
                 logging.error("The model folder does not contain the required models to run the DA tagger")
                 logging.error("Please run the train() method of the "

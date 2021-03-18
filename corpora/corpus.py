@@ -1,8 +1,7 @@
 import os
 
-from typing import List, Union
+from typing import List, Union, Dict
 from corpora.taxonomy import Tag, Taxonomy
-
 
 class Utterance:
     """
@@ -28,7 +27,7 @@ class Corpus:
         if not os.path.isdir(corpus_folder):
             raise FileNotFoundError(f"The provided folder ({corpus_folder}) does not exist")
         self.name = name
-        self.utterances: List[Utterance] = []
+        self.utterances: Dict[str, List[Utterance]] = {"train": [], "test": []}
         self.taxonomy = taxonomy
         return
 
@@ -40,6 +39,12 @@ class Corpus:
 
     def parse_corpus(self, folder):
         raise NotImplementedError()
+
+    def get_train_split(self):
+        return self.utterances['train']
+
+    def get_test_split(self):
+        return self.utterances['test']
 
     @staticmethod
     def da_to_taxonomy(dialogue_act: str, taxonomy: Taxonomy, context) -> List[Tag]:

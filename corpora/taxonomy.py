@@ -3,6 +3,16 @@ from typing import Union
 from dataclasses import dataclass
 
 
+class Tagset:
+    @staticmethod
+    def get_dimension_taxonomy() -> Enum:
+        raise NotImplementedError()
+
+    @staticmethod
+    def get_comm_taxonomy_given_dimension(dimension_value: int) -> Enum:
+        raise NotImplementedError()
+
+
 # ISO Standard
 class ISODimension(Enum):
     """
@@ -48,10 +58,31 @@ class ISOFeedbackFunction(Enum):
     Feedback = 1
 
 
+ISOCommFunction = Union[ISOFeedbackFunction, ISOSocialFunction, ISOTaskFunction]
+
+
 @dataclass
-class ISOTag:
+class ISOTag(Tagset):
     dimension: ISODimension
-    comm_function: Union[ISOFeedbackFunction, ISOSocialFunction, ISOTaskFunction]
+    comm_function: ISOCommFunction
+
+    def __init__(self, dimension: ISODimension, comm_function: ISOCommFunction):
+        self.dimension = dimension
+        self.comm_function = comm_function
+
+    @staticmethod
+    def get_comm_taxonomy_given_dimension(dimension_value: int):
+        dimension_dict = {
+            ISODimension.Unknown.value: None,
+            ISODimension.Task.value: ISOTaskFunction,
+            ISODimension.SocialObligation.value: ISOSocialFunction,
+            ISODimension.Feedback.value: ISOFeedbackFunction
+        }
+        return dimension_dict[dimension_value]
+
+    @staticmethod
+    def get_dimension_taxonomy():
+        return ISODimension
 
 
 # AMI Corpus
@@ -75,8 +106,18 @@ class AMIFunction(Enum):
 
 
 @dataclass
-class AMITag:
-    comm_function: AMIFunction
+class AMITag(Tagset):
+    def __init__(self, comm_function: AMIFunction):
+        self.dimension = None
+        self.comm_function: comm_function
+
+    @staticmethod
+    def get_comm_taxonomy_given_dimension(dimension_value: int = 0):
+        return AMIFunction
+
+    @staticmethod
+    def get_dimension_taxonomy():
+        return None
 
 
 # Maptask Corpus
@@ -96,8 +137,18 @@ class MaptaskFunction(Enum):
 
 
 @dataclass
-class MaptaskTag:
-    comm_function: MaptaskFunction
+class MaptaskTag(Tagset):
+    def __init__(self, comm_function: MaptaskFunction):
+        self.dimension = None
+        self.comm_function = comm_function
+
+    @staticmethod
+    def get_comm_taxonomy_given_dimension(dimension_value: int = 0):
+        return MaptaskFunction
+
+    @staticmethod
+    def get_dimension_taxonomy():
+        return None
 
 
 # SWDA Corpus
@@ -148,8 +199,18 @@ class SWDAFunction(Enum):
 
 
 @dataclass
-class SWDATag:
-    comm_function: SWDAFunction
+class SWDATag(Tagset):
+    def __init__(self, comm_function: SWDAFunction):
+        self.dimension = None
+        self.comm_function = comm_function
+
+    @staticmethod
+    def get_comm_taxonomy_given_dimension(dimension_value: int = 0):
+        return SWDAFunction
+
+    @staticmethod
+    def get_dimension_taxonomy():
+        return None
 
 
 # Tag type for taxonomies

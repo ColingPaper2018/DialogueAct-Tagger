@@ -16,13 +16,14 @@ class Model(Enum):
 
 
 class Config:
-    def __init__(self, model_type: Model, taxonomy: Taxonomy, corpora_list: List[Tuple[type, str]]):
+    def __init__(self, model_type: Model, taxonomy: Taxonomy, out_folder: str = None):
         current_timestamp = time.time()
         self.model_type = model_type
-        self.out_folder = f"models/{current_timestamp}/"
+        if out_folder is None:
+            out_folder = f"models/{current_timestamp}/"
+        self.out_folder = out_folder
         self.acceptance_threshold = 0.5
         self.taxonomy = taxonomy
-        self.corpora_list = corpora_list
 
     @staticmethod
     def from_dict(dict_):
@@ -34,12 +35,11 @@ class Config:
 
 class SVMConfig(Config):
     def __init__(self, taxonomy: Taxonomy, indexed_pos: bool, indexed_dep: bool,
-                 ngrams: bool, dep: bool, prev: bool, corpora_list: List[Tuple[type, str]],
-                 pipeline_files: List[str] = None):
-        Config.__init__(self, Model.SVM, taxonomy, corpora_list)
+                 ngrams: bool, dep: bool, prev: bool, pipeline_files: List[str] = None,
+                 out_folder: str = None):
+        Config.__init__(self, Model.SVM, taxonomy, out_folder)
         if pipeline_files is None:
             pipeline_files = []
-        self.classifier = CalibratedClassifierCV(LinearSVC(C=0.1), cv=3)
         self.indexed_pos = indexed_pos
         self.indexed_dep = indexed_dep
         self.ngrams = ngrams
@@ -47,6 +47,10 @@ class SVMConfig(Config):
         self.prev = prev
         self.taxonomy = taxonomy
         self.pipeline_files = pipeline_files
+
+    @staticmethod
+    def create_classifier():
+        return CalibratedClassifierCV(LinearSVC(C=0.1), cv=3)
 
     @staticmethod
     def from_dict(dict_):
@@ -57,8 +61,7 @@ class SVMConfig(Config):
             indexed_dep=dict_['indexed_dep'],
             ngrams=dict_['ngrams'],
             taxonomy=Taxonomy.from_str(dict_['taxonomy']),
-            pipeline_files=dict_['pipeline_files'],
-            corpora_list=dict_['corpora_list']
+            pipeline_files=dict_['pipeline_files']
         )
         svm_config.out_folder = dict_['out_folder']
         return svm_config
@@ -72,16 +75,15 @@ class SVMConfig(Config):
             "ngrams": self.ngrams,
             "taxonomy": self.taxonomy.to_str(),
             "pipeline_files": self.pipeline_files,
-            "out_folder": self.out_folder,
-            "corpora_list": self.corpora_list
+            "out_folder": self.out_folder
         }
 
 
 class TransformerConfig(Config):
-    def __init__(self, taxonomy: Taxonomy, corpora_list: List[Tuple[type, str]], device: str,
+    def __init__(self, taxonomy: Taxonomy, device: str,
                  optimizer: type, lr: float, batch_size: int, max_seq_len: int, n_epochs: int,
-                 pipeline_files: Optional[List[str]] = None):
-        Config.__init__(self, Model.SVM, taxonomy, corpora_list)
+                 pipeline_files: Optional[List[str]] = None, out_folder: str = None):
+        Config.__init__(self, Model.SVM, taxonomy, out_folder)
         if pipeline_files is None:
             pipeline_files = []
         self.device = device
@@ -100,7 +102,6 @@ class TransformerConfig(Config):
     def from_dict(dict_):
         transformer_config = TransformerConfig(
             taxonomy=Taxonomy.from_str(dict_['taxonomy']),
-            corpora_list=dict_['corpora_list'],
             device=dict_['device'],
             optimizer=dict_['optimizer'],
             lr=dict_['lr'],
@@ -119,7 +120,6 @@ class TransformerConfig(Config):
             "optimizer": self.optimizer,
             "taxonomy": self.taxonomy.to_str(),
             "out_folder": self.out_folder,
-            "corpora_list": self.corpora_list,
             "batch_size": self.batch_size,
             "max_seq_len": self.max_seq_len,
             "pad_index": self.pad_index,

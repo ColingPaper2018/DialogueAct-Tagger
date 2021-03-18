@@ -19,6 +19,7 @@ to dump the corpus in CSV format with original annotation and with ISO annotatio
 class AMI(Corpus):
     def __init__(self, corpus_folder, taxonomy: Taxonomy):
         Corpus.__init__(self, "AMI", corpus_folder, taxonomy)
+        self.test_files = ["ES2004", "ES2014", "IS1009", "TS3003", "TS3007", "EN2002"]
         corpus = self.load_corpus(corpus_folder)
         self.utterances = self.parse_corpus(corpus)
 
@@ -37,13 +38,17 @@ class AMI(Corpus):
             self.utterances = None
             return
 
-        dialogs = {}  # this will store dialogs from the corpus
+        dialogs = {"train": {}, "test": {}}  # this will store dialogs from the corpus
         dialog_names = []  # this will store file names from the corpus
         for dialog_name in os.listdir(corpus_folder + "/dialogueActs/"):
             if "dialog-act" in dialog_name:  # DA file
                 dialog_names.append(dialog_name.split("dialog-act")[0])
         for dialog_name in dialog_names:
-            dialogs[dialog_name] = OrderedDict()
+            if any(t in dialog_name for t in self.test_files):
+                destination = 'test'
+            else:
+                destination = 'train'
+            dialogs[destination][dialog_name] = OrderedDict()
             with open(corpus_folder + "/words/" + dialog_name + "words.xml") as wfile:
                 for line in wfile:
                     if "<w" not in line:  # not a word
@@ -52,8 +57,8 @@ class AMI(Corpus):
                         continue
                     word_id = line.split("id=\"")[1].split("\"")[0].split(".")[-1]
                     word_value = line.split(">")[1].split("<")[0]
-                    dialogs[dialog_name][word_id] = []
-                    dialogs[dialog_name][word_id].append(word_value)
+                    dialogs[destination][dialog_name][word_id] = []
+                    dialogs[destination][dialog_name][word_id].append(word_value)
             with open(corpus_folder + "/dialogueActs/" + dialog_name + "dialog-act.xml") as actfile:
                 dact = ""
                 for line in actfile:
@@ -72,10 +77,10 @@ class AMI(Corpus):
                         start_n = int(start_id)
                         stop_n = int(stop_id)
                         # 4. Build the query
-                        set = ["words" + str(i) for i in range(start_n, stop_n + 1)]
-                        for w in set:
+                        ami_set = ["words" + str(i) for i in range(start_n, stop_n + 1)]
+                        for w in ami_set:
                             try:
-                                dialogs[dialog_name][w].append(dact)
+                                dialogs[destination][dialog_name][w].append(dact)
                             except KeyError:
                                 continue
             with open(corpus_folder + "/segments/" + dialog_name + "segments.xml") as segmfile:
@@ -93,49 +98,50 @@ class AMI(Corpus):
                         start_n = int(start_id)
                         stop_n = int(stop_id)
                         # 4. Build the query
-                        set = ["words" + str(i) for i in range(start_n, stop_n + 1)]
-                        for w in set:
+                        ami_set = ["words" + str(i) for i in range(start_n, stop_n + 1)]
+                        for w in ami_set:
                             try:
-                                dialogs[dialog_name][w].append(str(segment))
+                                dialogs[destination][dialog_name][w].append(str(segment))
                             except KeyError:
                                 continue
                     segment += 1
         return dialogs
 
     def parse_corpus(self, dialogs):
-        parsed_corpus = []
-        for d in dialogs:
-            speaker_id = 0
-            sentence = ""
-            previous_utterance = Utterance(
-                text="",
-                tags=[],
-                context=[],
-                speaker_id=speaker_id
-            )
-            current_segment = -1
-            for word in dialogs[d]:
-                try:
-                    word, DA, segment = dialogs[d][word]
-                except ValueError:
-                    continue
-                parsed_da = self.da_to_taxonomy(DA, self.taxonomy)
-                previous_da = previous_utterance.tags[0] if len(previous_utterance.tags) > 0 else None
-                if (parsed_da != previous_da or current_segment != segment) and sentence != "":  # new DA or segment
-                    if self.da_to_taxonomy(DA, self.taxonomy)[0].comm_function.value > -1:  # not unknown DA
-                        parsed_corpus.append(
-                            Utterance(text=sentence.strip().replace("&#39;", "'"),
-                                      tags=self.da_to_taxonomy(DA, self.taxonomy),
-                                      context=[previous_utterance],
-                                      speaker_id=speaker_id)
-                        )
-                    previous_utterance = Utterance(text=sentence.strip().replace("&#39;", "'"),
-                                                   tags=self.da_to_taxonomy(DA, self.taxonomy),
-                                                   context=[previous_utterance],
-                                                   speaker_id=speaker_id)
-                    sentence = ""
-                current_segment = segment
-                sentence = sentence + " " + (word.strip())
+        parsed_corpus = {"train": [], "test": []}
+        for destination in ["train", "test"]:
+            for d in dialogs[destination]:
+                speaker_id = 0
+                sentence = ""
+                previous_utterance = Utterance(
+                    text="",
+                    tags=[],
+                    context=[],
+                    speaker_id=speaker_id
+                )
+                current_segment = -1
+                for word in dialogs[destination][d]:
+                    try:
+                        word, DA, segment = dialogs[destination][d][word]
+                    except ValueError:
+                        continue
+                    parsed_da = self.da_to_taxonomy(DA, self.taxonomy)
+                    previous_da = previous_utterance.tags[0] if len(previous_utterance.tags) > 0 else None
+                    if (parsed_da != previous_da or current_segment != segment) and sentence != "":  # new DA or segment
+                        if self.da_to_taxonomy(DA, self.taxonomy)[0].comm_function.value > -1:  # not unknown DA
+                            parsed_corpus[destination].append(
+                                Utterance(text=sentence.strip().replace("&#39;", "'"),
+                                          tags=self.da_to_taxonomy(DA, self.taxonomy),
+                                          context=[previous_utterance],
+                                          speaker_id=speaker_id)
+                            )
+                        previous_utterance = Utterance(text=sentence.strip().replace("&#39;", "'"),
+                                                       tags=self.da_to_taxonomy(DA, self.taxonomy),
+                                                       context=[previous_utterance],
+                                                       speaker_id=speaker_id)
+                        sentence = ""
+                    current_segment = segment
+                    sentence = sentence + " " + (word.strip())
 
         return parsed_corpus
 
