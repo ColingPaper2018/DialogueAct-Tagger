@@ -3,6 +3,7 @@ import os
 from typing import List, Union, Dict
 from corpora.taxonomy import Tag, Taxonomy
 
+
 class Utterance:
     """
     Utterance provides an interface to interact with the individual
@@ -14,6 +15,9 @@ class Utterance:
         self.tags = tags
         self.context = context
         self.speaker_id = speaker_id
+
+    def __str__(self):
+        return f"{self.speaker_id}: {self.text} - {self.tags}"
 
 
 class Corpus:

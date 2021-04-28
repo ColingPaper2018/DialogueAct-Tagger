@@ -26,6 +26,10 @@ class ISODimension(Enum):
     SocialObligation = 2
     Feedback = 3
 
+    @staticmethod
+    def values():
+        return {0: "Unknown", 1: "Task", 2: "SocialObligation", 3: "Feedback"}
+
 
 class ISOSocialFunction(Enum):
     """
@@ -35,6 +39,10 @@ class ISOSocialFunction(Enum):
     Thanking = 1
     Salutation = 2
     Apology = 3
+
+    @staticmethod
+    def values():
+        return {0: "Unknown", 1: "Thanking", 2: "Salutation", 3: "Apology"}
 
 
 class ISOTaskFunction(Enum):
@@ -49,6 +57,10 @@ class ISOTaskFunction(Enum):
     Directive = 5
     Commissive = 6
 
+    @staticmethod
+    def values():
+        return {0: "Unknown", 1: "Statement", 2: "PropQ", 3: "SetQ", 4: "ChoiceQ", 5: "Directive", 6: "Commissive"}
+
 
 class ISOFeedbackFunction(Enum):
     """
@@ -56,6 +68,10 @@ class ISOFeedbackFunction(Enum):
     """
     Unknown = 0
     Feedback = 1
+
+    @staticmethod
+    def values():
+        return {0: "Unknown", 1: "Feedback"}
 
 
 ISOCommFunction = Union[ISOFeedbackFunction, ISOSocialFunction, ISOTaskFunction]
@@ -83,6 +99,82 @@ class ISOTag(Tagset):
     @staticmethod
     def get_dimension_taxonomy():
         return ISODimension
+
+
+# MIDAS
+class MIDASDimension(Enum):
+    """
+    Enum for the Dimensions of the Dialogue Act Taxonomy. Currently supported dimensions are
+    Task
+    SocialObligation
+    Feedback
+    """
+    Unknown = 0
+    FunctionalRequest = 1
+    SemanticRequest = 2
+
+
+class MIDASSemanticFunction(Enum):
+    """
+    Tags for the Social Obligation dimension
+    """
+    Unknown = 0
+    FactualQuestion = 1
+    OpinionQuestion = 2
+    YesNoQuestion = 3
+    TaskCommand = 4
+    InvalidCommand = 5
+    Appreciation = 6
+    GeneralOpinion = 7
+    Complaint = 8
+    Comment = 9
+    StatementNonOpinion = 10
+    OtherAnswer = 11
+    PositiveAnswer = 12
+    NegativeAnswer = 13
+
+
+class MIDASFunctionalFunction(Enum):
+    """
+    Tags for the Task Dimension
+    """
+    Unknown = 0
+    Abandon = 1
+    Nonsense = 2
+    Opening = 3
+    Closing = 4
+    Hold = 5
+    Thanks = 6
+    BackChanneling = 7
+    Apology = 8
+    ApologyResponse = 9
+    Other = 10
+
+
+MIDASCommFunction = Union[MIDASFunctionalFunction, MIDASSemanticFunction]
+
+
+@dataclass
+class MIDASTag(Tagset):
+    dimension: MIDASDimension
+    comm_function: MIDASCommFunction
+
+    def __init__(self, dimension: MIDASDimension, comm_function: MIDASCommFunction):
+        self.dimension = dimension
+        self.comm_function = comm_function
+
+    @staticmethod
+    def get_comm_taxonomy_given_dimension(dimension_value: int):
+        dimension_dict = {
+            MIDASDimension.Unknown.value: None,
+            MIDASDimension.FunctionalRequest.value: MIDASFunctionalFunction,
+            MIDASDimension.SemanticRequest.value: MIDASSemanticFunction
+        }
+        return dimension_dict[dimension_value]
+
+    @staticmethod
+    def get_dimension_taxonomy():
+        return MIDASDimension
 
 
 # AMI Corpus
@@ -222,6 +314,7 @@ class Taxonomy(Enum):
     ISO = ISOTag
     Maptask = MaptaskTag
     SWDA = SWDATag
+    MIDAS = MIDASTag
 
     @staticmethod
     def from_str(taxonomy: str) -> "Taxonomy":
@@ -245,5 +338,7 @@ class Taxonomy(Enum):
             return "MaptaskTag"
         elif self.value == SWDATag:
             return "SWDATag"
+        elif self.value == MIDASTag:
+            return "MIDASTag"
         else:
             raise ValueError("Taxonomy value changed to an unexpected value")

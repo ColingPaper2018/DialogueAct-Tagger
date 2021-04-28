@@ -17,3 +17,6 @@ class DialogueActTagger:
 
     def tag(self, utterance: Utterance) -> List[Tag]:
         raise NotImplementedError()
+
+    def tag_batch(self, utterances: List[Utterance]) -> List[List[Tag]]:
+        raise NotImplementedError()

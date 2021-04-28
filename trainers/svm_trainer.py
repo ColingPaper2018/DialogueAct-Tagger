@@ -53,8 +53,6 @@ class SVMTrainer(Trainer):
                          f"more information on how to obtain more data")
             return
         train_pipeline.fit(features[0], np.ravel([u.tags for u in dataset]))
-        for _ in range(1, 4):
-            del(dataset[-1])
         return train_pipeline
 
     def dump_model(self, pipelines: dict):
@@ -111,3 +109,27 @@ class SVMTrainer(Trainer):
         if dump:
             self.dump_model(pipelines)
         return SVMTagger(self.config)
+
+    def get_da_distribution(self):
+        da_distribution = {"dimension": {}, "comm_function": {}}
+        dataset = []
+        for c in self.corpora:
+            dataset = dataset + c.utterances["train"]
+        for dim_value in self.taxonomy.value.get_dimension_taxonomy():
+            if dim_value.value > 0:
+                da_distribution["dimension"][dim_value] = (
+                    [u for u in dataset if any(t.dimension == dim_value for t in u.tags)])
+                da_distribution["comm_function"][dim_value] = {}
+                for comm_value in self.taxonomy.value.get_comm_taxonomy_given_dimension(dim_value.value):
+                    da_distribution["comm_function"][dim_value][comm_value] = \
+                        ([u for u in dataset if any(t.dimension == dim_value
+                                                       and t.comm_function == comm_value for t in u.tags)])
+        return da_distribution
+
+    def da_distribution_report(self):
+        da_distribution = self.get_da_distribution()
+        for k in da_distribution["dimension"]:
+            print(f"{k}: {len(da_distribution['dimension'][k])}")
+            for c in da_distribution["comm_function"][k]:
+                print(f"{c}: {len(da_distribution['comm_function'][k][c])}")
+            print("")

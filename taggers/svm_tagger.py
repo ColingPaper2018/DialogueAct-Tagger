@@ -56,6 +56,7 @@ class SVMTagger(DialogueActTagger):
                 logging.error("Please run the train_all() method of the "
                               "DialogueActTrain class to obtain the required models")
                 exit(1)
+        self.nlp_inst = spacy.load("en")
 
     @staticmethod
     def build_features(tagged_utterances: List[Utterance], config: SVMConfig, nlp_inst=None):
@@ -67,11 +68,14 @@ class SVMTagger(DialogueActTagger):
             features = {"word_count": utt.text.lower(), "labels": {}}
             for i, tok in enumerate(doc):
                 if config.indexed_pos:
-                    features["labels"]["pos_" + tok.tag_] = True
+                    features["labels"][f"pos_{tok.tag_}_{str(i)}"] = True
+                    features["labels"][f"pos_{tok.tag_}_{tok.text}"] = True
                 if config.dep:
-                    features["labels"][tok.dep_] = True
+                    features["labels"][f"dep_{tok.dep_}"] = True
+                if config.pos:
+                    features["labels"][f"dep_{tok.tag_}"] = True
                 if config.indexed_dep:
-                    features["labels"]["pos_" + tok.dep_] = True
+                    features["labels"][f"idep_{tok.dep_}_{str(i)}"] = True
             if config.prev:
                 features["prev_" + str(utt.context[0]) if len(utt.context) > 0 else "Other"] = True
             dimension_features.append(features)
@@ -85,12 +89,9 @@ class SVMTagger(DialogueActTagger):
         ])
         return dimension_features, [wordcount_pipeline, label_pipeline]
 
-    def tag(self, sentence: Union[Utterance, str]) -> List[Tag]:
-        if type(sentence) == str:
-            sentence = Utterance(text=sentence, tags=[], context=self.history, speaker_id=0)
+    def annotate_features(self, features) -> List[Tag]:
         tags = []
         if 'dimension' in self.classifiers:
-            features = SVMTagger.build_features([sentence], self.config)[0]
             prediction = self.classifiers['dimension'].model.predict_proba(features)[0]
             for dimension in range(0, len(prediction)):
                 feature_dim = prediction[dimension]
@@ -102,8 +103,22 @@ class SVMTagger(DialogueActTagger):
                                 self.classifiers[f'comm_{dimension + 1}'].model.predict(features)[0]))
                     )
         else:
-            features = SVMTagger.build_features([sentence], self.config)[0]
             tags.append(self.classifiers['comm_all'].target_tagset(
                 comm_function=self.classifiers['comm_all'].target_tagset(
                     self.classifiers['comm_all'].model.predict(features)[0])))
         return tags
+
+    def tag(self, sentence: Union[Utterance, str]) -> List[Tag]:
+        if type(sentence) == str:
+            sentence = Utterance(text=sentence, tags=[], context=self.history, speaker_id=0)
+        features = SVMTagger.build_features([sentence], self.config)[0]
+        return self.annotate_features(features)
+
+    def tag_batch(self, batch: List[Union[Utterance, str]]) -> List[List[Tag]]:
+        batch = [Utterance(text=sentence, tags=[], context=self.history, speaker_id=0) if type(sentence) == str
+                 else sentence
+                 for sentence in batch]
+        featurized_batch = self.build_features(batch, self.config, self.nlp_inst)[0]
+
+        tagged_batch = [self.annotate_features([features]) for features in featurized_batch]
+        return tagged_batch

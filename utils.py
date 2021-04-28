@@ -2,6 +2,8 @@ from sklearn.base import BaseEstimator, TransformerMixin
 from torchtext.data import Dataset, Example
 from typing import List, Optional
 from corpora.corpus import Utterance
+from sklearn.preprocessing import MultiLabelBinarizer
+from sklearn.base import TransformerMixin #gives fit_transform method for free
 
 
 class ItemSelector(BaseEstimator, TransformerMixin):
@@ -110,3 +112,15 @@ def stringify_tags(dataset: List[Utterance], attribute: str, filter_attr: Option
                 text=utterance.text
             ))
     return stringified_dataset
+
+
+class MyLabelBinarizer(TransformerMixin):
+    def __init__(self, *args, **kwargs):
+        self.encoder = MultiLabelBinarizer(*args, **kwargs)
+
+    def fit(self, x, y=0):
+        self.encoder.fit(x)
+        return self
+
+    def transform(self, x, y=0):
+        return self.encoder.transform(x)

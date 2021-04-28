@@ -35,7 +35,7 @@ class Config:
 
 class SVMConfig(Config):
     def __init__(self, taxonomy: Taxonomy, indexed_pos: bool, indexed_dep: bool,
-                 ngrams: bool, dep: bool, prev: bool, pipeline_files: List[str] = None,
+                 ngrams: bool, dep: bool, pos: bool, prev: bool, pipeline_files: List[str] = None,
                  out_folder: str = None):
         Config.__init__(self, Model.SVM, taxonomy, out_folder)
         if pipeline_files is None:
@@ -44,6 +44,7 @@ class SVMConfig(Config):
         self.indexed_dep = indexed_dep
         self.ngrams = ngrams
         self.dep = dep
+        self.pos = pos
         self.prev = prev
         self.taxonomy = taxonomy
         self.pipeline_files = pipeline_files
@@ -57,6 +58,7 @@ class SVMConfig(Config):
         svm_config = SVMConfig(
             indexed_pos=dict_['indexed_pos'],
             dep=dict_['dep'],
+            pos=dict_['pos'],
             prev=dict_['prev'],
             indexed_dep=dict_['indexed_dep'],
             ngrams=dict_['ngrams'],
@@ -70,6 +72,7 @@ class SVMConfig(Config):
         return {
             "indexed_pos": self.indexed_pos,
             "dep": self.dep,
+            "pos": self.pos,
             "prev": self.prev,
             "indexed_dep": self.indexed_dep,
             "ngrams": self.ngrams,
