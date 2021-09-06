@@ -26,13 +26,18 @@ class BERT(nn.Module):
     The BERT module from Hugging Face provides a pre-trained transformer with
     BERT sentence embeddings
     """
+
     def __init__(self, n_classes):
         super(BERT, self).__init__()
-        config = BertConfig.from_pretrained('bert-base-uncased')
+        config = BertConfig.from_pretrained("bert-base-uncased")
         config.num_labels = n_classes
         self.encoder = BertForSequenceClassification(config)
 
     def forward(self, text, label):
+        print("fw")
+        print(text[0][0].size())
+        print(text.size())
+        print(label.size())
         loss, text_fea = self.encoder(text, labels=label)[:2]
         return loss, text_fea
 
@@ -56,9 +61,13 @@ class TransformerTagger(DialogueActTagger):
                     self.load_checkpoint(pipeline, model, cfg.device)
                     self.models[pipeline] = model
             except OSError:
-                logging.error("The model folder does not contain the required models to run the DA tagger")
-                logging.error("Please run the train() method of the "
-                              "DialogueActTrain class to obtain the required models")
+                logging.error(
+                    "The model folder does not contain the required models to run the DA tagger"
+                )
+                logging.error(
+                    "Please run the train() method of the "
+                    "DialogueActTrain class to obtain the required models"
+                )
                 exit(1)
 
     @staticmethod
@@ -74,51 +83,76 @@ class TransformerTagger(DialogueActTagger):
             return
 
         state_dict = torch.load(load_path, map_location=device)
-        logger.info(f'Model loaded from <== {load_path}')
+        logger.info(f"Model loaded from <== {load_path}")
 
-        model.load_state_dict(state_dict['model_state_dict'])
-        return state_dict['valid_loss']
+        model.load_state_dict(state_dict["model_state_dict"])
+        return state_dict["valid_loss"]
 
     @staticmethod
     def build_features(tagged_utterances: List[Utterance], config: TransformerConfig):
-        label_field = Field(sequential=False, use_vocab=False, batch_first=True, dtype=torch.float)
-        text_field = Field(use_vocab=False, tokenize=config.tokenizer.encode, lower=False, include_lengths=False,
-                           batch_first=True, fix_length=config.max_seq_len, pad_token=config.pad_index,
-                           unk_token=config.unk_index)
-        fields = {'Text': text_field, 'Label': label_field}
-        train_df = pd.DataFrame([[utt.text, utt.tags[0]] for utt in tagged_utterances],
-                                columns=['Text', 'Label'])
+        label_field = Field(
+            sequential=False, use_vocab=False, batch_first=True, dtype=torch.float
+        )
+        text_field = Field(
+            use_vocab=False,
+            tokenize=config.tokenizer.encode,
+            lower=False,
+            include_lengths=False,
+            batch_first=True,
+            fix_length=config.max_seq_len,
+            pad_token=config.pad_index,
+            unk_token=config.unk_index,
+        )
+        fields = {"Text": text_field, "Label": label_field}
+        train_df = pd.DataFrame(
+            [[utt.text, utt.tags[0]] for utt in tagged_utterances],
+            columns=["Text", "Label"],
+        )
         train_set = DataFrameDataset(train_df, fields)
         return train_set
 
     @staticmethod
-    def stringify_tags(dataset: List[Utterance], attribute: str, filter_attr: Optional[str] = None,
-                       filter_value: Optional[str] = None):
+    def stringify_tags(
+        dataset: List[Utterance],
+        attribute: str,
+        filter_attr: Optional[str] = None,
+        filter_value: Optional[str] = None,
+    ):
         stringified_dataset = []
         for utterance in dataset:
             new_tags = []
             new_context = []
             for tag in utterance.tags:
-                if filter_value is None or getattr(tag, filter_attr).__str__() == filter_value:
+                if (
+                    filter_value is None
+                    or getattr(tag, filter_attr).__str__() == filter_value
+                ):
                     new_tags.append(getattr(tag, attribute).__str__())
             for tag in utterance.context[0].tags:
-                if filter_value is None or getattr(tag, filter_attr).__str__() == filter_value:
+                if (
+                    filter_value is None
+                    or getattr(tag, filter_attr).__str__() == filter_value
+                ):
                     new_context.append(getattr(tag, attribute).__str__())
             if len(new_tags) > 0:
-                stringified_dataset.append(Utterance(
-                    speaker_id=utterance.speaker_id,
-                    tags=new_tags,
-                    context=new_context,
-                    text=utterance.text
-                ))
+                stringified_dataset.append(
+                    Utterance(
+                        speaker_id=utterance.speaker_id,
+                        tags=new_tags,
+                        context=new_context,
+                        text=utterance.text,
+                    )
+                )
         return stringified_dataset
 
     def tag(self, sentence: Union[Utterance, str]) -> List[Tag]:
         if type(sentence) == str:
-            sentence = Utterance(text=sentence, tags=[], context=self.history, speaker_id=0)
+            sentence = Utterance(
+                text=sentence, tags=[], context=self.history, speaker_id=0
+            )
         tags = []
         if self.config.taxonomy == Taxonomy.ISO:
-            dimension_prediction = self.models['dimension'](sentence.text)[1]
+            dimension_prediction = self.models["dimension"](sentence.text)[1]
             print(dimension_prediction)
             return []
         #     features = self.build_features([sentence], self.config)[0]
@@ -144,4 +178,3 @@ class TransformerTagger(DialogueActTagger):
         #     features = SVMTagger.build_features([sentence], self.config)[0]
         #     tags.append(AMITag(comm_function=AMIFunction(self.models['comm_all'].predict(features)[0])))
         # return tags
-

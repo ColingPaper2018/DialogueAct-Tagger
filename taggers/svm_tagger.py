@@ -47,19 +47,33 @@ class SVMTagger(DialogueActTagger):
                 if "dimension" in pipeline:
                     target_tagset = cfg.taxonomy.value.get_dimension_taxonomy()
                 elif pipeline == "comm_all":
-                    target_tagset = cfg.taxonomy.value.get_comm_taxonomy_given_dimension()
+                    target_tagset = (
+                        cfg.taxonomy.value.get_comm_taxonomy_given_dimension()
+                    )
                 else:
-                    target_tagset = cfg.taxonomy.value.get_comm_taxonomy_given_dimension(int(pipeline.split("comm_")[1]))
-                self.classifiers[pipeline] = Classifier(model=pickle.load(pipeline_file), target_tagset=target_tagset)
+                    target_tagset = (
+                        cfg.taxonomy.value.get_comm_taxonomy_given_dimension(
+                            int(pipeline.split("comm_")[1])
+                        )
+                    )
+                self.classifiers[pipeline] = Classifier(
+                    model=pickle.load(pipeline_file), target_tagset=target_tagset
+                )
             except OSError:
-                logging.error("The model folder does not contain the required models to run the DA tagger")
-                logging.error("Please run the train_all() method of the "
-                              "DialogueActTrain class to obtain the required models")
+                logging.error(
+                    "The model folder does not contain the required models to run the DA tagger"
+                )
+                logging.error(
+                    "Please run the train_all() method of the "
+                    "DialogueActTrain class to obtain the required models"
+                )
                 exit(1)
         self.nlp_inst = spacy.load("en")
 
     @staticmethod
-    def build_features(tagged_utterances: List[Utterance], config: SVMConfig, nlp_inst=None):
+    def build_features(
+        tagged_utterances: List[Utterance], config: SVMConfig, nlp_inst=None
+    ):
         if nlp_inst is None:
             nlp_inst = spacy.load("en")
         dimension_features = []
@@ -77,48 +91,70 @@ class SVMTagger(DialogueActTagger):
                 if config.indexed_dep:
                     features["labels"][f"idep_{tok.dep_}_{str(i)}"] = True
             if config.prev:
-                features["prev_" + str(utt.context[0]) if len(utt.context) > 0 else "Other"] = True
+                features[
+                    "prev_" + str(utt.context[0]) if len(utt.context) > 0 else "Other"
+                ] = True
             dimension_features.append(features)
-        wordcount_pipeline = Pipeline([
-            ('selector', ItemSelector(key='word_count')),
-            ('vectorizer', CountVectorizer(ngram_range=(1, 2)))
-        ])
-        label_pipeline = Pipeline([
-            ('selector', ItemSelector(key='labels')),
-            ('vectorizer', DictVectorizer())
-        ])
+        wordcount_pipeline = Pipeline(
+            [
+                ("selector", ItemSelector(key="word_count")),
+                ("vectorizer", CountVectorizer(ngram_range=(1, 2))),
+            ]
+        )
+        label_pipeline = Pipeline(
+            [("selector", ItemSelector(key="labels")), ("vectorizer", DictVectorizer())]
+        )
         return dimension_features, [wordcount_pipeline, label_pipeline]
 
     def annotate_features(self, features) -> List[Tag]:
         tags = []
-        if 'dimension' in self.classifiers:
-            prediction = self.classifiers['dimension'].model.predict_proba(features)[0]
+        if "dimension" in self.classifiers:
+            prediction = self.classifiers["dimension"].model.predict_proba(features)[0]
             for dimension in range(0, len(prediction)):
                 feature_dim = prediction[dimension]
                 if feature_dim > self.config.acceptance_threshold:
                     tags.append(
                         self.config.taxonomy.value(
-                            dimension=self.classifiers["dimension"].target_tagset(dimension + 1),
-                            comm_function=self.classifiers[f'comm_{dimension + 1}'].target_tagset(
-                                self.classifiers[f'comm_{dimension + 1}'].model.predict(features)[0]))
+                            dimension=self.classifiers["dimension"].target_tagset(
+                                dimension + 1
+                            ),
+                            comm_function=self.classifiers[
+                                f"comm_{dimension + 1}"
+                            ].target_tagset(
+                                self.classifiers[f"comm_{dimension + 1}"].model.predict(
+                                    features
+                                )[0]
+                            ),
+                        )
                     )
         else:
-            tags.append(self.classifiers['comm_all'].target_tagset(
-                comm_function=self.classifiers['comm_all'].target_tagset(
-                    self.classifiers['comm_all'].model.predict(features)[0])))
+            tags.append(
+                self.classifiers["comm_all"].target_tagset(
+                    comm_function=self.classifiers["comm_all"].target_tagset(
+                        self.classifiers["comm_all"].model.predict(features)[0]
+                    )
+                )
+            )
         return tags
 
     def tag(self, sentence: Union[Utterance, str]) -> List[Tag]:
         if type(sentence) == str:
-            sentence = Utterance(text=sentence, tags=[], context=self.history, speaker_id=0)
+            sentence = Utterance(
+                text=sentence, tags=[], context=self.history, speaker_id=0
+            )
         features = SVMTagger.build_features([sentence], self.config)[0]
         return self.annotate_features(features)
 
     def tag_batch(self, batch: List[Union[Utterance, str]]) -> List[List[Tag]]:
-        batch = [Utterance(text=sentence, tags=[], context=self.history, speaker_id=0) if type(sentence) == str
-                 else sentence
-                 for sentence in batch]
+        batch = [
+            Utterance(text=sentence, tags=[], context=self.history, speaker_id=0)
+            if type(sentence) == str
+            else sentence
+            for sentence in batch
+        ]
         featurized_batch = self.build_features(batch, self.config, self.nlp_inst)[0]
 
-        tagged_batch = [self.annotate_features([features]) for features in featurized_batch]
+        tagged_batch = [
+            self.annotate_features([features]) for features in featurized_batch
+        ]
         return tagged_batch

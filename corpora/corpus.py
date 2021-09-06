@@ -9,8 +9,14 @@ class Utterance:
     Utterance provides an interface to interact with the individual
     sentences of a corpus
     """
-    def __init__(self, text: str, tags: List[Union[Tag, str]],
-                 context: List["Utterance"], speaker_id: int):
+
+    def __init__(
+        self,
+        text: str,
+        tags: List[Union[Tag, str]],
+        context: List["Utterance"],
+        speaker_id: int,
+    ):
         self.text = text
         self.tags = tags
         self.context = context
@@ -29,7 +35,9 @@ class Corpus:
         :param corpus_folder: folder containing the corpus
         """
         if not os.path.isdir(corpus_folder):
-            raise FileNotFoundError(f"The provided folder ({corpus_folder}) does not exist")
+            raise FileNotFoundError(
+                f"The provided folder ({corpus_folder}) does not exist"
+            )
         self.name = name
         self.utterances: Dict[str, List[Utterance]] = {"train": [], "test": []}
         self.taxonomy = taxonomy
@@ -45,12 +53,11 @@ class Corpus:
         raise NotImplementedError()
 
     def get_train_split(self):
-        return self.utterances['train']
+        return self.utterances["train"]
 
     def get_test_split(self):
-        return self.utterances['test']
+        return self.utterances["test"]
 
     @staticmethod
     def da_to_taxonomy(dialogue_act: str, taxonomy: Taxonomy, context) -> List[Tag]:
         raise NotImplementedError()
-

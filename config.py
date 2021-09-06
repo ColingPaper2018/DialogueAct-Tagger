@@ -34,9 +34,18 @@ class Config:
 
 
 class SVMConfig(Config):
-    def __init__(self, taxonomy: Taxonomy, indexed_pos: bool, indexed_dep: bool,
-                 ngrams: bool, dep: bool, pos: bool, prev: bool, pipeline_files: List[str] = None,
-                 out_folder: str = None):
+    def __init__(
+        self,
+        taxonomy: Taxonomy,
+        indexed_pos: bool,
+        indexed_dep: bool,
+        ngrams: bool,
+        dep: bool,
+        pos: bool,
+        prev: bool,
+        pipeline_files: List[str] = None,
+        out_folder: str = None,
+    ):
         Config.__init__(self, Model.SVM, taxonomy, out_folder)
         if pipeline_files is None:
             pipeline_files = []
@@ -56,16 +65,16 @@ class SVMConfig(Config):
     @staticmethod
     def from_dict(dict_):
         svm_config = SVMConfig(
-            indexed_pos=dict_['indexed_pos'],
-            dep=dict_['dep'],
-            pos=dict_['pos'],
-            prev=dict_['prev'],
-            indexed_dep=dict_['indexed_dep'],
-            ngrams=dict_['ngrams'],
-            taxonomy=Taxonomy.from_str(dict_['taxonomy']),
-            pipeline_files=dict_['pipeline_files']
+            indexed_pos=dict_["indexed_pos"],
+            dep=dict_["dep"],
+            pos=dict_["pos"],
+            prev=dict_["prev"],
+            indexed_dep=dict_["indexed_dep"],
+            ngrams=dict_["ngrams"],
+            taxonomy=Taxonomy.from_str(dict_["taxonomy"]),
+            pipeline_files=dict_["pipeline_files"],
         )
-        svm_config.out_folder = dict_['out_folder']
+        svm_config.out_folder = dict_["out_folder"]
         return svm_config
 
     def to_dict(self):
@@ -78,14 +87,23 @@ class SVMConfig(Config):
             "ngrams": self.ngrams,
             "taxonomy": self.taxonomy.to_str(),
             "pipeline_files": self.pipeline_files,
-            "out_folder": self.out_folder
+            "out_folder": self.out_folder,
         }
 
 
 class TransformerConfig(Config):
-    def __init__(self, taxonomy: Taxonomy, device: str,
-                 optimizer: type, lr: float, batch_size: int, max_seq_len: int, n_epochs: int,
-                 pipeline_files: Optional[List[str]] = None, out_folder: str = None):
+    def __init__(
+        self,
+        taxonomy: Taxonomy,
+        device: str,
+        optimizer: type,
+        lr: float,
+        batch_size: int,
+        max_seq_len: int,
+        n_epochs: int,
+        pipeline_files: Optional[List[str]] = None,
+        out_folder: str = None,
+    ):
         Config.__init__(self, Model.SVM, taxonomy, out_folder)
         if pipeline_files is None:
             pipeline_files = []
@@ -95,7 +113,7 @@ class TransformerConfig(Config):
         self.taxonomy = taxonomy
         self.batch_size = batch_size
         self.max_seq_len = max_seq_len
-        self.tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
+        self.tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
         self.pad_index = self.tokenizer.convert_tokens_to_ids(self.tokenizer.pad_token)
         self.unk_index = self.tokenizer.convert_tokens_to_ids(self.tokenizer.unk_token)
         self.n_epochs = n_epochs
@@ -104,16 +122,16 @@ class TransformerConfig(Config):
     @staticmethod
     def from_dict(dict_):
         transformer_config = TransformerConfig(
-            taxonomy=Taxonomy.from_str(dict_['taxonomy']),
-            device=dict_['device'],
-            optimizer=dict_['optimizer'],
-            lr=dict_['lr'],
-            batch_size=dict_['batch_size'],
-            max_seq_len=dict_['max_seq_len'],
-            n_epochs=dict_['n_epochs'],
-            pipeline_files=dict_['model_files']
+            taxonomy=Taxonomy.from_str(dict_["taxonomy"]),
+            device=dict_["device"],
+            optimizer=dict_["optimizer"],
+            lr=dict_["lr"],
+            batch_size=dict_["batch_size"],
+            max_seq_len=dict_["max_seq_len"],
+            n_epochs=dict_["n_epochs"],
+            pipeline_files=dict_["model_files"],
         )
-        transformer_config.out_folder = dict_['out_folder']
+        transformer_config.out_folder = dict_["out_folder"]
         return transformer_config
 
     def to_dict(self):
@@ -128,5 +146,5 @@ class TransformerConfig(Config):
             "pad_index": self.pad_index,
             "unk_index": self.unk_index,
             "n_epochs": self.n_epochs,
-            "pipeline_files": self.pipeline_files
+            "pipeline_files": self.pipeline_files,
         }

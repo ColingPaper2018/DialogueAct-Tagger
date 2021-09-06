@@ -14,8 +14,8 @@ if [ ! -d "data/AMI/" ] ; then
     mkdir data/AMI
 fi
 
-if [ ! -d "data/Oasis" ] ; then
-    mkdir data/Oasis
+if [ ! -d "data/DailyDialog" ] ; then
+    mkdir data/DailyDialog
 fi
 
 if [ ! -d "data/Maptask/maptaskv2-1" ] ; then
@@ -28,7 +28,8 @@ if [ ! -d "data/AMI/corpus" ] ; then
 	 mkdir corpus && cd corpus && wget http://groups.inf.ed.ac.uk/ami/AMICorpusAnnotations/ami_public_manual_1.6.2.zip && unzip -q ami_public_manual_1.6.2.zip && rm -f ami_public_manual_1.6.2.zip && cd .. && mv corpus data/AMI/corpus
 fi
 
-if [ ! -d "data/Oasis/corpus" ] ; then
-	echo "Downloading the Oasis corpus"
-         mkdir corpus && cd corpus && wget http://groups.inf.ed.ac.uk/oasis/download/oasis_full_rel1.0.zip && unzip -q oasis_full_rel1.0.zip && rm -f oasis_full_rel1.0.zip && cd .. && mv corpus data/Oasis/corpus
+
+if [ ! -d "data/DailyDialog/corpus" ] ; then
+	echo "Downloading the DailyDialog corpus"
+         mkdir corpus && cd corpus && wget http://yanran.li/files/ijcnlp_dailydialog.zip && unzip -q ijcnlp_dailydialog.zip && cd ijcnlp_dailydialog && unzip train.zip && unzip test.zip && unzip validation.zip && rm -f train.zip test.zip validation.zip && cd .. && rm -f ijcnlp_dailydialog.zip && cd .. && mv corpus/ijcnlp_dailydialog data/DailyDialog/corpus
 fi

@@ -4,3 +4,4 @@ models
 __pycache*
 data
 .ipynb_checkpoints/
+*.swp

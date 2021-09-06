@@ -39,16 +39,32 @@ class DialogueActTester:
             #
 
             print("Dimension Classification Report")
-            print(classification_report(binarizer.transform(y_dim_true), binarizer.transform(y_dim_pred)))
+            print(
+                classification_report(
+                    binarizer.transform(y_dim_true), binarizer.transform(y_dim_pred)
+                )
+            )
             for dimension in tagger.config.taxonomy.value.get_dimension_taxonomy():
                 if dimension.value > 0:
                     y_comm_true = []
                     y_comm_pred = []
                     for idx, datapoint in enumerate(y_true):
                         if any(t.dimension == dimension for t in datapoint):
-                            y_comm_true.append([t.comm_function.value for t in datapoint if t.dimension == dimension][0])
+                            y_comm_true.append(
+                                [
+                                    t.comm_function.value
+                                    for t in datapoint
+                                    if t.dimension == dimension
+                                ][0]
+                            )
                             try:
-                                y_comm_pred.append([t.comm_function.value for t in y_pred[idx] if t.dimension == dimension][0])
+                                y_comm_pred.append(
+                                    [
+                                        t.comm_function.value
+                                        for t in y_pred[idx]
+                                        if t.dimension == dimension
+                                    ][0]
+                                )
                             except IndexError:
                                 y_comm_pred.append(0)  # unknown
                     print(f"Communication Function Report for {dimension}")

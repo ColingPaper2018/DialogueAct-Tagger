@@ -21,6 +21,7 @@ class ISODimension(Enum):
     SocialObligation
     Feedback
     """
+
     Unknown = 0
     Task = 1
     SocialObligation = 2
@@ -35,6 +36,7 @@ class ISOSocialFunction(Enum):
     """
     Tags for the Social Obligation dimension
     """
+
     Unknown = 0
     Thanking = 1
     Salutation = 2
@@ -49,6 +51,7 @@ class ISOTaskFunction(Enum):
     """
     Tags for the Task Dimension
     """
+
     Unknown = 0
     Statement = 1
     PropQ = 2
@@ -59,13 +62,22 @@ class ISOTaskFunction(Enum):
 
     @staticmethod
     def values():
-        return {0: "Unknown", 1: "Statement", 2: "PropQ", 3: "SetQ", 4: "ChoiceQ", 5: "Directive", 6: "Commissive"}
+        return {
+            0: "Unknown",
+            1: "Statement",
+            2: "PropQ",
+            3: "SetQ",
+            4: "ChoiceQ",
+            5: "Directive",
+            6: "Commissive",
+        }
 
 
 class ISOFeedbackFunction(Enum):
     """
     Tags for the Feedback dimension
     """
+
     Unknown = 0
     Feedback = 1
 
@@ -92,7 +104,7 @@ class ISOTag(Tagset):
             ISODimension.Unknown.value: None,
             ISODimension.Task.value: ISOTaskFunction,
             ISODimension.SocialObligation.value: ISOSocialFunction,
-            ISODimension.Feedback.value: ISOFeedbackFunction
+            ISODimension.Feedback.value: ISOFeedbackFunction,
         }
         return dimension_dict[dimension_value]
 
@@ -109,6 +121,7 @@ class MIDASDimension(Enum):
     SocialObligation
     Feedback
     """
+
     Unknown = 0
     FunctionalRequest = 1
     SemanticRequest = 2
@@ -118,6 +131,7 @@ class MIDASSemanticFunction(Enum):
     """
     Tags for the Social Obligation dimension
     """
+
     Unknown = 0
     FactualQuestion = 1
     OpinionQuestion = 2
@@ -138,6 +152,7 @@ class MIDASFunctionalFunction(Enum):
     """
     Tags for the Task Dimension
     """
+
     Unknown = 0
     Abandon = 1
     Nonsense = 2
@@ -168,7 +183,7 @@ class MIDASTag(Tagset):
         dimension_dict = {
             MIDASDimension.Unknown.value: None,
             MIDASDimension.FunctionalRequest.value: MIDASFunctionalFunction,
-            MIDASDimension.SemanticRequest.value: MIDASSemanticFunction
+            MIDASDimension.SemanticRequest.value: MIDASSemanticFunction,
         }
         return dimension_dict[dimension_value]
 
@@ -243,6 +258,30 @@ class MaptaskTag(Tagset):
         return None
 
 
+# Maptask Corpus
+class DailyDialogFunction(Enum):
+    Unknown = 0
+    Inform = 1
+    Question = 2
+    Directive = 3
+    Commissive = 4
+
+
+@dataclass
+class DailyDialogTag(Tagset):
+    def __init__(self, comm_function: DailyDialogFunction):
+        self.dimension = None
+        self.comm_function = comm_function
+
+    @staticmethod
+    def get_comm_taxonomy_given_dimension(dimension_value: int = 0):
+        return DailyDialogFunction
+
+    @staticmethod
+    def get_dimension_taxonomy():
+        return None
+
+
 # SWDA Corpus
 class SWDAFunction(Enum):
     Uninterpretable = 0
@@ -306,7 +345,7 @@ class SWDATag(Tagset):
 
 
 # Tag type for taxonomies
-Tag = Union[ISOTag, AMITag, MaptaskTag, SWDATag]
+Tag = Union[ISOTag, AMITag, MaptaskTag, SWDATag, DailyDialogTag, MIDASTag]
 
 
 class Taxonomy(Enum):
@@ -315,6 +354,7 @@ class Taxonomy(Enum):
     Maptask = MaptaskTag
     SWDA = SWDATag
     MIDAS = MIDASTag
+    DailyDialog = MIDASTag
 
     @staticmethod
     def from_str(taxonomy: str) -> "Taxonomy":
@@ -326,6 +366,10 @@ class Taxonomy(Enum):
             return Taxonomy.Maptask
         elif taxonomy.lower() == "swdatag":
             return Taxonomy.SWDA
+        elif taxonomy.lower() == "midastag":
+            return Taxonomy.MIDAS
+        elif taxonomy.lower() == "dailydialogtag":
+            return Taxonomy.DailyDialog
         else:
             raise NotImplementedError(f"Unknown taxonomy: {taxonomy}")
 
@@ -340,5 +384,7 @@ class Taxonomy(Enum):
             return "SWDATag"
         elif self.value == MIDASTag:
             return "MIDASTag"
+        elif self.value == DailyDialogTag:
+            return "DailyDialogTag"
         else:
             raise ValueError("Taxonomy value changed to an unexpected value")

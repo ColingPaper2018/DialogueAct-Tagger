@@ -3,7 +3,7 @@ from torchtext.data import Dataset, Example
 from typing import List, Optional
 from corpora.corpus import Utterance
 from sklearn.preprocessing import MultiLabelBinarizer
-from sklearn.base import TransformerMixin #gives fit_transform method for free
+from sklearn.base import TransformerMixin  # gives fit_transform method for free
 
 
 class ItemSelector(BaseEstimator, TransformerMixin):
@@ -35,6 +35,7 @@ class ItemSelector(BaseEstimator, TransformerMixin):
     key : hashable, required
         The key corresponding to the desired value in a mappable.
     """
+
     def __init__(self, key):
         self.key = key
 
@@ -59,7 +60,9 @@ class DataFrameDataset(Dataset):
                 filter_pred(example) is true, or use all examples if None.
                 Default is None
         """
-        self.examples = examples.apply(SeriesExample.fromSeries, args=(fields,), axis=1).tolist()
+        self.examples = examples.apply(
+            SeriesExample.fromSeries, args=(fields,), axis=1
+        ).tolist()
         if filter_pred is not None:
             self.examples = filter(filter_pred, self.examples)
         self.fields = dict(fields)
@@ -83,8 +86,9 @@ class SeriesExample(Example):
 
         for key, field in fields.items():
             if key not in data:
-                raise ValueError("Specified key {} was not found in "
-                                 "the input data".format(key))
+                raise ValueError(
+                    "Specified key {} was not found in " "the input data".format(key)
+                )
             if field is not None:
                 setattr(ex, key, field.preprocess(data[key]))
             else:
@@ -92,8 +96,12 @@ class SeriesExample(Example):
         return ex
 
 
-def stringify_tags(dataset: List[Utterance], attribute: str, filter_attr: Optional[str] = None,
-                   filter_value: Optional[str] = None):
+def stringify_tags(
+    dataset: List[Utterance],
+    attribute: str,
+    filter_attr: Optional[str] = None,
+    filter_value: Optional[str] = None,
+):
     stringified_dataset = []
     for utterance in dataset:
         new_tags = []
@@ -105,12 +113,14 @@ def stringify_tags(dataset: List[Utterance], attribute: str, filter_attr: Option
             if filter_value is None or getattr(tag, filter_attr).value == filter_value:
                 new_context.append(getattr(tag, attribute).value)
         if len(new_tags) > 0:
-            stringified_dataset.append(Utterance(
-                speaker_id=utterance.speaker_id,
-                tags=new_tags,
-                context=new_context,
-                text=utterance.text
-            ))
+            stringified_dataset.append(
+                Utterance(
+                    speaker_id=utterance.speaker_id,
+                    tags=new_tags,
+                    context=new_context,
+                    text=utterance.text,
+                )
+            )
     return stringified_dataset
 
 
