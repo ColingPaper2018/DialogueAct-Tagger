@@ -6,6 +6,7 @@ Conversational Agents"](https://www.aclweb.org/anthology/C18-1300.pdf):
 
 Mezza, S., Cervone, A., Stepanov, E., Tortoreto, G., & Riccardi, G. (2018, August). ISO-Standard Domain-Independent Dialogue Act Tagging for Conversational Agents. In Proceedings of the 27th International Conference on Computational Linguistics (pp. 3539-3551).
 
+_Note: this is the new version of the resource, updated with new datasets and libraries. For the original version presented in our 2018 article, please refer to the "coling2018" branch_.
 # Getting started
 
 This repository contains a set of utilities which can be used to train and test a fully functional Dialogue Act Tagger compliant to the new ISO DA scheme. 
